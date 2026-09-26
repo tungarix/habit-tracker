@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
 import '../../core/date_utils.dart';
+import '../../core/enums.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../shared/habit_style.dart';
 
 /// Add / edit a habit. Pass [existing] to edit, leave null to create.
 class HabitEditDialog extends ConsumerStatefulWidget {
@@ -28,7 +30,12 @@ class _HabitEditDialogState extends ConsumerState<HabitEditDialog> {
   late final TextEditingController _desc;
   late int _colorValue;
   late int _iconCodePoint;
+  late String _category; // HabitCategory.name; '' = none (legacy)
+  late String _kind; // HabitKind.storageName
+  late final TextEditingController _target;
   late Set<int> _weekdays; // empty = every day
+
+  bool get _isCount => _kind == HabitKind.count.storageName;
 
   bool get _isEdit => widget.existing != null;
 
@@ -40,6 +47,9 @@ class _HabitEditDialogState extends ConsumerState<HabitEditDialog> {
     _desc = TextEditingController(text: e?.description ?? '');
     _colorValue = e?.colorValue ?? kHabitColors.first.toARGB32();
     _iconCodePoint = e?.iconCodePoint ?? kHabitIcons.first.codePoint;
+    _category = e?.category ?? HabitCategory.beden.name;
+    _kind = e?.kind ?? HabitKind.bool_.storageName;
+    _target = TextEditingController(text: '${e?.target ?? 1}');
     _weekdays = e == null ? <int>{} : parseWeekdays(e.scheduledWeekdays).toSet();
   }
 
@@ -47,7 +57,16 @@ class _HabitEditDialogState extends ConsumerState<HabitEditDialog> {
   void dispose() {
     _name.dispose();
     _desc.dispose();
+    _target.dispose();
     super.dispose();
+  }
+
+  /// Daily target: only meaningful for count habits, always 1 for bool ones.
+  int get _targetValue {
+    if (!_isCount) return 1;
+    final parsed = int.tryParse(_target.text.trim());
+    if (parsed == null || parsed < 1) return 1;
+    return parsed;
   }
 
   Future<void> _save() async {
@@ -63,6 +82,9 @@ class _HabitEditDialogState extends ConsumerState<HabitEditDialog> {
         description: Value(desc),
         colorValue: _colorValue,
         iconCodePoint: _iconCodePoint,
+        category: _category,
+        kind: _kind,
+        target: _targetValue,
         scheduledWeekdays: weekdays,
       ));
     } else {
@@ -71,6 +93,9 @@ class _HabitEditDialogState extends ConsumerState<HabitEditDialog> {
         description: desc,
         colorValue: _colorValue,
         iconCodePoint: _iconCodePoint,
+        category: _category,
+        kind: _kind,
+        target: _targetValue,
         scheduledWeekdays: weekdays,
       );
     }
@@ -98,6 +123,46 @@ class _HabitEditDialogState extends ConsumerState<HabitEditDialog> {
               TextField(
                 controller: _desc,
                 decoration: const InputDecoration(labelText: 'Açıklama (opsiyonel)'),
+              ),
+              const SizedBox(height: 20),
+              _SectionLabel('Tür'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final k in HabitKind.values)
+                    ChoiceChip(
+                      label: Text(k.label),
+                      selected: _kind == k.storageName,
+                      onSelected: (_) => setState(() => _kind = k.storageName),
+                    ),
+                ],
+              ),
+              if (_isCount) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _target,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Günlük hedef',
+                    hintText: 'Örn. 10000 (adım) veya 90 (dakika)',
+                    helperText: 'Hedefe ulaşıldığında gün ✓ sayılır.',
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              _SectionLabel('Kategori'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final c in HabitCategory.values)
+                    ChoiceChip(
+                      label: Text(c.label),
+                      selected: _category == c.name,
+                      onSelected: (_) => setState(() => _category = c.name),
+                    ),
+                ],
               ),
               const SizedBox(height: 20),
               _SectionLabel('Renk'),

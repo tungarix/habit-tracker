@@ -1,26 +1,13 @@
 import 'package:aktenak_habit_tracker/core/date_utils.dart';
+import 'package:aktenak_habit_tracker/core/enums.dart';
 import 'package:aktenak_habit_tracker/core/streak.dart';
-import 'package:aktenak_habit_tracker/data/database/database.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Habit _habit({
-  DateTime? createdAt,
-  String scheduledWeekdays = '',
-}) {
-  return Habit(
-    id: 1,
-    name: 'Test',
-    description: null,
-    colorValue: 0xFF4CAF50,
-    iconCodePoint: 0xe000,
-    createdAt: createdAt ?? DateTime(2026, 1, 1),
-    archivedAt: null,
-    sortOrder: 0,
-    scheduledWeekdays: scheduledWeekdays,
-  );
-}
+import 'helpers.dart';
 
-Set<String> _dates(Iterable<DateTime> ds) => ds.map(formatYmd).toSet();
+// Fixtures live in helpers.dart so a schema change touches one file.
+final _habit = testHabit;
+final _statuses = statusMap;
 
 void main() {
   group('date utils', () {
@@ -39,6 +26,21 @@ void main() {
       expect(parseWeekdays('5,1,3'), [1, 3, 5]);
       expect(weekdaysToString([3, 1, 5, 1]), '1,3,5');
     });
+
+    test('daysInMonth', () {
+      expect(daysInMonth(DateTime(2026, 2, 15)), 28);
+      expect(daysInMonth(DateTime(2028, 2, 1)), 29); // leap year
+      expect(daysInMonth(DateTime(2026, 7, 1)), 31);
+    });
+  });
+
+  group('status cycle', () {
+    test('boş → ✓ → ✗ → – → boş', () {
+      expect(nextStatus(null), EntryStatus.done);
+      expect(nextStatus(EntryStatus.done), EntryStatus.missed);
+      expect(nextStatus(EntryStatus.missed), EntryStatus.skipped);
+      expect(nextStatus(EntryStatus.skipped), isNull);
+    });
   });
 
   group('streaks (everyday habit)', () {
@@ -46,36 +48,71 @@ void main() {
     final todayDate = DateTime(2026, 6, 23);
 
     test('consecutive done days build the current streak', () {
-      final done = _dates([
-        DateTime(2026, 6, 21),
-        DateTime(2026, 6, 22),
-        DateTime(2026, 6, 23),
-      ]);
-      final s = computeStreaks(habit, done, todayDate);
+      final s = computeStreaks(
+        habit,
+        _statuses(done: [
+          DateTime(2026, 6, 21),
+          DateTime(2026, 6, 22),
+          DateTime(2026, 6, 23),
+        ]),
+        todayDate,
+      );
       expect(s.current, 3);
       expect(s.longest, 3);
     });
 
-    test("today not yet done does not break the streak", () {
-      final done = _dates([
-        DateTime(2026, 6, 21),
-        DateTime(2026, 6, 22),
-        // 6/23 (today) not done yet
-      ]);
-      final s = computeStreaks(habit, done, todayDate);
+    test('today not yet marked does not break the streak', () {
+      final s = computeStreaks(
+        habit,
+        _statuses(done: [
+          DateTime(2026, 6, 21),
+          DateTime(2026, 6, 22),
+          // 6/23 (today) untracked
+        ]),
+        todayDate,
+      );
       expect(s.current, 2);
     });
 
-    test('a missed past day breaks the current streak', () {
-      final done = _dates([
-        DateTime(2026, 6, 20),
-        // 6/21 missed
-        DateTime(2026, 6, 22),
-        DateTime(2026, 6, 23),
-      ]);
-      final s = computeStreaks(habit, done, todayDate);
+    test('an untracked past day breaks the current streak', () {
+      final s = computeStreaks(
+        habit,
+        _statuses(done: [
+          DateTime(2026, 6, 20),
+          // 6/21 untracked
+          DateTime(2026, 6, 22),
+          DateTime(2026, 6, 23),
+        ]),
+        todayDate,
+      );
       expect(s.current, 2);
       expect(s.longest, 2);
+    });
+
+    test('an explicit missed (✗) breaks the streak, today included', () {
+      final s = computeStreaks(
+        habit,
+        _statuses(
+          done: [DateTime(2026, 6, 21), DateTime(2026, 6, 22)],
+          missed: [DateTime(2026, 6, 23)], // today explicitly failed
+        ),
+        todayDate,
+      );
+      expect(s.current, 0);
+      expect(s.longest, 2);
+    });
+
+    test('a skipped (–) day is neutral: does not break, does not count', () {
+      final s = computeStreaks(
+        habit,
+        _statuses(
+          done: [DateTime(2026, 6, 20), DateTime(2026, 6, 21), DateTime(2026, 6, 23)],
+          skipped: [DateTime(2026, 6, 22)],
+        ),
+        todayDate,
+      );
+      expect(s.current, 3);
+      expect(s.longest, 3);
     });
   });
 
@@ -86,8 +123,11 @@ void main() {
 
     test('unscheduled days do not break the streak', () {
       // Done on Fri 6/19 and Mon 6/22; the weekend in between is unscheduled.
-      final done = _dates([DateTime(2026, 6, 19), DateTime(2026, 6, 22)]);
-      final s = computeStreaks(habit, done, todayDate);
+      final s = computeStreaks(
+        habit,
+        _statuses(done: [DateTime(2026, 6, 19), DateTime(2026, 6, 22)]),
+        todayDate,
+      );
       expect(s.current, 2);
     });
   });
@@ -96,10 +136,31 @@ void main() {
     test('completion rate counts only scheduled days', () {
       final habit = _habit(createdAt: DateTime(2026, 6, 22), scheduledWeekdays: '1,2,3');
       final todayDate = DateTime(2026, 6, 24); // Wed; scheduled Mon,Tue,Wed
-      final done = _dates([DateTime(2026, 6, 22), DateTime(2026, 6, 24)]); // 2 of 3
-      final stats = computeStats(habit, done, todayDate);
+      final stats = computeStats(
+        habit,
+        _statuses(done: [DateTime(2026, 6, 22), DateTime(2026, 6, 24)]), // 2 of 3
+        todayDate,
+      );
       expect(stats.totalScheduled, 3);
       expect(stats.totalDone, 2);
+      expect(stats.completionRate, closeTo(2 / 3, 1e-9));
+    });
+
+    test('skipped days are excluded from the denominator', () {
+      final habit = _habit(createdAt: DateTime(2026, 6, 20));
+      final todayDate = DateTime(2026, 6, 23); // 4 days total
+      final stats = computeStats(
+        habit,
+        _statuses(
+          done: [DateTime(2026, 6, 20), DateTime(2026, 6, 22)],
+          skipped: [DateTime(2026, 6, 21)],
+          missed: [DateTime(2026, 6, 23)],
+        ),
+        todayDate,
+      );
+      expect(stats.totalScheduled, 3); // 4 days - 1 skipped
+      expect(stats.totalDone, 2);
+      expect(stats.totalSkipped, 1);
       expect(stats.completionRate, closeTo(2 / 3, 1e-9));
     });
   });

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants.dart';
+import '../habit_style.dart';
 import '../../data/database/database.dart';
 
 /// Round colour swatch with the habit's icon.

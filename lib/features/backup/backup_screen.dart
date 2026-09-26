@@ -67,7 +67,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           ? utf8.decode(picked.bytes!)
           : await File(picked.path!).readAsString();
       final imported = await _repo.importJson(content, replace: mode == _ImportMode.replace);
-      _toast('İçe aktarıldı: ${imported.habits} alışkanlık, ${imported.entries} kayıt.');
+      _toast('İçe aktarıldı: ${imported.habits} alışkanlık, '
+          '${imported.entries} kayıt, ${imported.moods} mood, '
+          '${imported.tasks} görev, ${imported.sessions} seans.');
     } catch (e) {
       _toast('İçe aktarım başarısız: $e');
     } finally {
@@ -109,12 +111,12 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: const Text('Yedek & Ayarlar')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
-            Text('Yedek', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               'Verilerin yalnızca bu cihazda. Başka bir cihaza taşımak için '
               'dışa aktar, oradan içe aktar.',
