@@ -37,14 +37,18 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.textDim,
   });
 
+  // NOTE (2026-09-26 erişilebilirlik denetimi): `missed`/`skipped` (dark) ve
+  // `done`/`gold` (light) `surface` üzerinde WCAG AA metin eşiğinin (4.5:1)
+  // altındaydı (sırasıyla 4.41/3.49/3.30/3.63:1). Aynı ton/doygunlukta,
+  // yalnızca parlaklığı ayarlanmış değerlerle hepsi ≥4.5:1'e çekildi.
   static const dark = AppColors(
     bg: Color(0xFF0E141B),
     surface: Color(0xFF161F2B),
     surfaceAlt: Color(0xFF1E2A3A),
     border: Color(0xFF263244),
     done: Color(0xFF22C55E),
-    missed: Color(0xFFEF4444),
-    skipped: Color(0xFF64748B),
+    missed: Color(0xFFEF4949),
+    skipped: Color(0xFF79899F),
     gold: Color(0xFFCBA135),
     idle: Color(0xFF222E3D),
     text: Color(0xFFE6ECF3),
@@ -56,10 +60,10 @@ class AppColors extends ThemeExtension<AppColors> {
     surface: Color(0xFFFFFFFF),
     surfaceAlt: Color(0xFFEAEFF5),
     border: Color(0xFFD8E0EA),
-    done: Color(0xFF16A34A),
+    done: Color(0xFF12883E),
     missed: Color(0xFFDC2626),
     skipped: Color(0xFF64748B),
-    gold: Color(0xFFA8802A),
+    gold: Color(0xFF947025),
     idle: Color(0xFFE2E8F0),
     text: Color(0xFF17202B),
     textDim: Color(0xFF5C6B7E),
@@ -129,16 +133,17 @@ class AppTheme {
   static ThemeData light() => _build(AppColors.light, Brightness.light);
 
   static ThemeData _build(AppColors c, Brightness brightness) {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: c.done,
-      brightness: brightness,
-    ).copyWith(
-      surface: c.surface,
-      onSurface: c.text,
-      primary: c.done,
-      error: c.missed,
-      outline: c.textDim,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: c.done,
+          brightness: brightness,
+        ).copyWith(
+          surface: c.surface,
+          onSurface: c.text,
+          primary: c.done,
+          error: c.missed,
+          outline: c.textDim,
+        );
 
     return ThemeData(
       useMaterial3: true,

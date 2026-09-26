@@ -29,7 +29,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Open the add dialog from the app bar.
-    await tester.tap(find.byTooltip('Alışkanlık ekle'));
+    await tester.tap(find.byTooltip('Alışkanlık ekle (Ctrl+N)'));
     await tester.pumpAndSettle();
     expect(find.text('Yeni alışkanlık'), findsOneWidget);
 

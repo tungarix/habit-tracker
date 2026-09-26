@@ -6,9 +6,11 @@ See [BLUEPRINT.md](BLUEPRINT.md) for the original design rationale.
 Dört modül + bunları tek ekranda birleştiren bir panel: **alışkanlıklar · mood · görevler ·
 odak seansları**.
 
+![Panel ekran görüntüsü](docs/screenshot.png)
+
 ## İndir
 
-**[En son sürümü indir →](https://github.com/tungarix/habit-tracker-kaynak/releases/latest)**
+**[En son sürümü indir →](https://github.com/tungarix/habit-tracker/releases/latest)**
 (Windows, portable — kurulum gerektirmez, zip'i açıp `aktenak_habit_tracker.exe`'yi
 çalıştırman yeterli.)
 
@@ -17,7 +19,7 @@ yayımcı"). Bu bilinen bir sınır — kod imzalama sertifikası şu an kapsam 
 için: **Ek bilgi → Yine de çalıştır**. Kaynağa güvenmek istemiyorsan kodun tamamı bu
 repoda, MIT lisanslı — inceleyip kendin derleyebilirsin.
 
-Sorun/öneri için [Issues](https://github.com/tungarix/habit-tracker-kaynak/issues)
+Sorun/öneri için [Issues](https://github.com/tungarix/habit-tracker/issues)
 sekmesini kullanabilirsin.
 
 ## Özellikler (mevcut durum)
@@ -43,7 +45,13 @@ sekmesini kullanabilirsin.
 - **Alışkanlıklar**: oluştur / düzenle / arşivle / sil. Ad, açıklama, **tür**
   (yap-yapma / sayılabilir + günlük hedef), **kategori** (Beden/Konuşma/Zihin), renk,
   ikon ve planlı günler (boş = her gün).
-- **Tema**: karanlık varsayılan, tek dokunuşla açık temaya geçiş (tercih kalıcı).
+- **Tema**: karanlık varsayılan, tek dokunuşla açık temaya geçiş (tercih kalıcı). Her iki
+  temada da metin/durum renkleri WCAG AA kontrast eşiğini (4.5:1) geçer.
+- **Sistem tepsisi** (Windows/Linux): pencereyi kapatmak uygulamayı kapatmaz, tepsiye
+  küçültür — tepsi ipucu bugünkü `X/Y` durumunu gösterir, sağ tık menüsünden bugün için
+  bekleyen alışkanlıkları tek tıkla ✓ işaretleyebilirsin. Tamamen çıkmak için menüdeki
+  **Çıkış**.
+- **Klavye kısayolları**: Ctrl+1..4 sekmeler arası geçiş, Ctrl+N alışkanlık ekler.
 - **Yedek**: tüm veri tek `.json` dosyası (format v4: alışkanlıklar + işaretlemeler +
   mood + görevler + seanslar). v1/v2/v3 yedekler içe aktarılabilir. **Birleştir** veya
   **Tamamen değiştir** seçenekleri.

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -46,6 +47,14 @@ Widget _embeddedTasks({Key? key}) => TasksScreen(key: key, embedded: true);
 
 const _tabs = ['Panel', 'Aylık', 'Görevler', 'İstatistik'];
 
+/// One entry per `_tabs` index — Ctrl+1 switches to Panel, Ctrl+2 to Aylık…
+const _tabKeys = [
+  LogicalKeyboardKey.digit1,
+  LogicalKeyboardKey.digit2,
+  LogicalKeyboardKey.digit3,
+  LogicalKeyboardKey.digit4,
+];
+
 class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
 
@@ -58,6 +67,18 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final colors = AppColors.of(context);
     final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
 
+    return CallbackShortcuts(
+      bindings: {
+        for (final (i, key) in _tabKeys.indexed)
+          SingleActivator(key, control: true): () => setState(() => _index = i),
+        SingleActivator(LogicalKeyboardKey.keyN, control: true): () =>
+            HabitEditDialog.show(context),
+      },
+      child: Focus(autofocus: true, child: _shell(colors, isDark)),
+    );
+  }
+
+  Widget _shell(AppColors colors, bool isDark) {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
@@ -65,8 +86,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           children: [
             Icon(Icons.check_box_rounded, color: colors.done, size: 24),
             const SizedBox(width: 8),
-            const Text('Aktenak',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const Text(
+              'Aktenak',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
             const SizedBox(width: 16),
             // Tabs scroll on narrow windows instead of overflowing.
             Expanded(
@@ -78,6 +101,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                       if (i > 0) const SizedBox(width: 6),
                       _TabButton(
                         label: label,
+                        shortcutHint: 'Ctrl+${i + 1}',
                         selected: _index == i,
                         onTap: () => setState(() => _index = i),
                       ),
@@ -91,11 +115,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         actions: [
           IconButton(
             tooltip: isDark ? 'Açık tema' : 'Karanlık tema',
-            icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+            icon: Icon(
+              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+            ),
             onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
           ),
           IconButton(
-            tooltip: 'Alışkanlık ekle',
+            tooltip: 'Alışkanlık ekle (Ctrl+N)',
             icon: const Icon(Icons.add),
             onPressed: () => HabitEditDialog.show(context),
           ),
@@ -144,8 +170,10 @@ class _LazyIndexedStack extends StatefulWidget {
 }
 
 class _LazyIndexedStackState extends State<_LazyIndexedStack> {
-  late final List<bool> _visited =
-      List<bool>.filled(widget.builders.length, false);
+  late final List<bool> _visited = List<bool>.filled(
+    widget.builders.length,
+    false,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -162,27 +190,36 @@ class _LazyIndexedStackState extends State<_LazyIndexedStack> {
 
 class _TabButton extends StatelessWidget {
   final String label;
+  final String shortcutHint;
   final bool selected;
   final VoidCallback onTap;
-  const _TabButton({required this.label, required this.selected, required this.onTap});
+  const _TabButton({
+    required this.label,
+    required this.shortcutHint,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return Material(
-      color: selected ? colors.surfaceAlt : Colors.transparent,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
+    return Tooltip(
+      message: shortcutHint,
+      child: Material(
+        color: selected ? colors.surfaceAlt : Colors.transparent,
         borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected ? colors.done : colors.textDim,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? colors.done : colors.textDim,
+              ),
             ),
           ),
         ),
