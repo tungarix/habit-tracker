@@ -6,6 +6,20 @@ See [BLUEPRINT.md](BLUEPRINT.md) for the original design rationale.
 Dört modül + bunları tek ekranda birleştiren bir panel: **alışkanlıklar · mood · görevler ·
 odak seansları**.
 
+## İndir
+
+**[En son sürümü indir →](https://github.com/tungarix/habit-tracker-kaynak/releases/latest)**
+(Windows, portable — kurulum gerektirmez, zip'i açıp `aktenak_habit_tracker.exe`'yi
+çalıştırman yeterli.)
+
+Uygulama imzasız olduğu için Windows SmartScreen bir uyarı gösterebilir ("Bilinmeyen
+yayımcı"). Bu bilinen bir sınır — kod imzalama sertifikası şu an kapsam dışı. Devam etmek
+için: **Ek bilgi → Yine de çalıştır**. Kaynağa güvenmek istemiyorsan kodun tamamı bu
+repoda, MIT lisanslı — inceleyip kendin derleyebilirsin.
+
+Sorun/öneri için [Issues](https://github.com/tungarix/habit-tracker-kaynak/issues)
+sekmesini kullanabilirsin.
+
 ## Özellikler (mevcut durum)
 
 - **Panel** (açılış ekranı, günlük kullanımın çoğunu tek başına karşılar):
@@ -94,26 +108,21 @@ Saat 01:35'te işaretlenen alışkanlık biten güne yazılır. Tüm tarih hesap
 - `kind='count'` — günlük `target`'a karşı sayı (ör. 10000 adım); `habit_entries.value`
   girilen miktarı tutar, hedefe ulaşınca gün ✓ sayılır.
 
-Testler: `flutter test` → **73 test** — saf mantık (seri, istatistik, görev sıralama,
+Testler: `flutter test` → **72 test** (71 geçer, 1 gerçek yedek dosyası olmayan makinelerde
+atlanır) — saf mantık (seri, istatistik, görev sıralama,
 odak toplamları), gün sınırı, `core/` saflığı, migration (gerçek veri + yarım kalmış
 yükseltme onarımı), panel düzeni üç kırılma noktasında, uçtan uca alışkanlık ekleme.
 
 ## Geliştirme
 
-Flutter SDK bu projede `C:\Users\user\flutter` altına kurulu (PATH'te değil). Komutlardan önce:
-
-```powershell
-$env:Path = "C:\Users\user\flutter\bin;" + $env:Path
-```
-
-Sık kullanılanlar:
+Gereksinimler: [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable), Windows
+masaüstü derlemesi için Visual Studio Build Tools + "Desktop development with C++" workload
+(`flutter doctor` eksik olanı gösterir).
 
 ```powershell
 flutter pub get
 dart run build_runner build           # drift kod üretimi (tabloları değiştirince)
 flutter analyze
 flutter test
-flutter run -d windows                # veya: flutter build windows
+flutter run -d windows                # veya: flutter build windows --release
 ```
-
-Windows masaüstü derleme zinciri (Visual Studio Build Tools 2022 + C++) bu makinede kurulu.
