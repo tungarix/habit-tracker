@@ -53,22 +53,26 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   }
 
   Future<void> _load() async {
-    final stored =
-        await ref.read(databaseProvider).getSetting(AppConstants.themeModeKey);
+    final stored = await ref
+        .read(databaseProvider)
+        .getSetting(AppConstants.themeModeKey);
     if (stored == 'light') state = ThemeMode.light;
   }
 
   Future<void> toggle() async {
     state = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-    await ref.read(databaseProvider).setSetting(
+    await ref
+        .read(databaseProvider)
+        .setSetting(
           AppConstants.themeModeKey,
           state == ThemeMode.light ? 'light' : 'dark',
         );
   }
 }
 
-final themeModeProvider =
-    NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
 
 // -----------------------------------------------------------------------------
 // The tracking day
@@ -102,8 +106,42 @@ class DayStartHourNotifier extends Notifier<int> {
   }
 }
 
-final dayStartHourProvider =
-    NotifierProvider<DayStartHourNotifier, int>(DayStartHourNotifier.new);
+final dayStartHourProvider = NotifierProvider<DayStartHourNotifier, int>(
+  DayStartHourNotifier.new,
+);
+
+// -----------------------------------------------------------------------------
+// Evening reminder
+// -----------------------------------------------------------------------------
+
+/// Hour (0-23) the evening reminder notification fires at; null = off.
+/// [TrayService] reads this to decide when to nudge.
+class ReminderHourNotifier extends Notifier<int?> {
+  @override
+  int? build() {
+    _load();
+    return null;
+  }
+
+  Future<void> _load() async {
+    final stored = await ref
+        .read(databaseProvider)
+        .getSetting(AppConstants.reminderHourKey);
+    final parsed = int.tryParse(stored ?? '');
+    if (parsed != null && parsed >= 0 && parsed <= 23) state = parsed;
+  }
+
+  Future<void> set(int? hour) async {
+    state = hour;
+    await ref
+        .read(databaseProvider)
+        .setSetting(AppConstants.reminderHourKey, hour == null ? '' : '$hour');
+  }
+}
+
+final reminderHourProvider = NotifierProvider<ReminderHourNotifier, int?>(
+  ReminderHourNotifier.new,
+);
 
 /// The current tracking day. **Every screen must read the day from here** so
 /// the day-start rule stays in one place — and so an app left open overnight
@@ -155,15 +193,15 @@ final allSessionsProvider = StreamProvider<List<FocusSession>>(
 /// Maps habitId -> (date -> status).
 final statusesByHabitProvider =
     Provider<AsyncValue<Map<int, Map<String, EntryStatus>>>>((ref) {
-  final entriesAsync = ref.watch(allEntriesProvider);
-  return entriesAsync.whenData((entries) {
-    final map = <int, Map<String, EntryStatus>>{};
-    for (final e in entries) {
-      (map[e.habitId] ??= <String, EntryStatus>{})[e.date] = e.status;
-    }
-    return map;
-  });
-});
+      final entriesAsync = ref.watch(allEntriesProvider);
+      return entriesAsync.whenData((entries) {
+        final map = <int, Map<String, EntryStatus>>{};
+        for (final e in entries) {
+          (map[e.habitId] ??= <String, EntryStatus>{})[e.date] = e.status;
+        }
+        return map;
+      });
+    });
 
 /// Maps habitId -> (date -> recorded amount). Only meaningful for count habits.
 final valuesByHabitProvider = Provider<Map<int, Map<String, int>>>((ref) {
@@ -213,7 +251,10 @@ final todayViewsProvider = Provider<AsyncValue<List<HabitTodayView>>>((ref) {
         status: (byHabit[h.id] ?? const <String, EntryStatus>{})[tStr],
         scheduledToday: isScheduledOn(h.scheduledWeekdays, t),
         streak: computeStreaks(
-            h, byHabit[h.id] ?? const <String, EntryStatus>{}, t),
+          h,
+          byHabit[h.id] ?? const <String, EntryStatus>{},
+          t,
+        ),
       ),
   ];
 
@@ -229,25 +270,26 @@ final todayViewsProvider = Provider<AsyncValue<List<HabitTodayView>>>((ref) {
 });
 
 /// Statuses for a single habit (for stats / grids).
-final habitStatusesProvider =
-    Provider.family<Map<String, EntryStatus>, int>((ref, habitId) {
+final habitStatusesProvider = Provider.family<Map<String, EntryStatus>, int>((
+  ref,
+  habitId,
+) {
   final map = ref.watch(statusesByHabitProvider).value ?? const {};
   return map[habitId] ?? const <String, EntryStatus>{};
 });
 
 /// Lifetime stats for a single habit.
-final habitStatsProvider =
-    Provider.family<AsyncValue<HabitStats>, int>((ref, habitId) {
+final habitStatsProvider = Provider.family<AsyncValue<HabitStats>, int>((
+  ref,
+  habitId,
+) {
   final habitsAsync = ref.watch(activeHabitsProvider);
   final archivedAsync = ref.watch(archivedHabitsProvider);
   final statusesAsync = ref.watch(statusesByHabitProvider);
 
   if (statusesAsync.isLoading) return const AsyncValue.loading();
 
-  final all = <Habit>[
-    ...?habitsAsync.value,
-    ...?archivedAsync.value,
-  ];
+  final all = <Habit>[...?habitsAsync.value, ...?archivedAsync.value];
   Habit? habit;
   for (final h in all) {
     if (h.id == habitId) {
@@ -260,7 +302,8 @@ final habitStatsProvider =
   final statuses =
       statusesAsync.value![habitId] ?? const <String, EntryStatus>{};
   return AsyncValue.data(
-      computeStats(habit, statuses, ref.watch(todayProvider)));
+    computeStats(habit, statuses, ref.watch(todayProvider)),
+  );
 });
 
 // -----------------------------------------------------------------------------
@@ -293,13 +336,15 @@ final taskSummaryProvider = Provider<task_logic.TaskSummary>((ref) {
 // -----------------------------------------------------------------------------
 
 final focusSummaryProvider = Provider<FocusSummary>((ref) {
-  final sessions = ref.watch(allSessionsProvider).value ?? const <FocusSession>[];
+  final sessions =
+      ref.watch(allSessionsProvider).value ?? const <FocusSession>[];
   return summariseFocus(sessions, ref.watch(todayProvider));
 });
 
 /// Focus seconds per day for the last 14 days (dashboard sparkline).
 final focusSeriesProvider = Provider<List<int>>((ref) {
-  final sessions = ref.watch(allSessionsProvider).value ?? const <FocusSession>[];
+  final sessions =
+      ref.watch(allSessionsProvider).value ?? const <FocusSession>[];
   return focusSecondsSeries(sessions, ref.watch(todayProvider), 14);
 });
 
@@ -329,7 +374,8 @@ final todayProgressProvider = Provider<TodayProgress>((ref) {
 /// Rolling 7-day completion across every active habit.
 final weekCompletionProvider = Provider<double>((ref) {
   final habits = ref.watch(activeHabitsProvider).value ?? const <Habit>[];
-  final byHabit = ref.watch(statusesByHabitProvider).value ??
+  final byHabit =
+      ref.watch(statusesByHabitProvider).value ??
       const <int, Map<String, EntryStatus>>{};
   return lastNDaysCompletion(habits, byHabit, ref.watch(todayProvider), 7);
 });
@@ -346,8 +392,12 @@ class OverviewStats {
     required this.bestLongest,
     required this.thisMonth,
   });
-  static const empty =
-      OverviewStats(totalMarks: 0, bestCurrent: 0, bestLongest: 0, thisMonth: 0);
+  static const empty = OverviewStats(
+    totalMarks: 0,
+    bestCurrent: 0,
+    bestLongest: 0,
+    thisMonth: 0,
+  );
 }
 
 /// Overview across all (active + archived) habits. Counts only ✓ marks.

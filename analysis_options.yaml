@@ -12,6 +12,12 @@ analyzer:
     - build/**
     - windows/**
     - linux/**
+    # Yerel-only klasörler (bkz. .gitignore) — repoda yok, ama proje
+    # kökünde bulunursa analyzer bunları da taramaya çalışır.
+    - surumler/**
+    - calistir/**
+    - canli-veri/**
+    - arsiv-eski-kod/**
 include: package:flutter_lints/flutter.yaml
 
 linter:

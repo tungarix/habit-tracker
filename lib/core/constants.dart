@@ -21,7 +21,21 @@ class AppConstants {
 
   /// Settings key for the theme mode.
   static const String themeModeKey = 'themeMode';
+
+  /// Settings key for the evening-reminder hour (0-23); absent = disabled.
+  static const String reminderHourKey = 'reminderHour';
+
+  /// Default hour offered when the reminder is first turned on.
+  static const int defaultReminderHour = 20;
 }
 
 /// Short labels for the days of the week (Mon..Sun -> index 0..6).
-const List<String> kWeekdayShort = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+const List<String> kWeekdayShort = [
+  'Pzt',
+  'Sal',
+  'Çar',
+  'Per',
+  'Cum',
+  'Cmt',
+  'Paz',
+];

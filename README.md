@@ -52,6 +52,9 @@ sekmesini kullanabilirsin.
   bekleyen alışkanlıkları tek tıkla ✓ işaretleyebilirsin. Tamamen çıkmak için menüdeki
   **Çıkış**.
 - **Klavye kısayolları**: Ctrl+1..4 sekmeler arası geçiş, Ctrl+N alışkanlık ekler.
+- **Ayarlar** (Yedek & Ayarlar): Windows başlangıcında otomatik açılma (kapalı başlar,
+  isteğe bağlı) ve akşam hatırlatıcısı — seçtiğin saatte bekleyen alışkanlık varsa bir
+  bildirim gösterir.
 - **Yedek**: tüm veri tek `.json` dosyası (format v4: alışkanlıklar + işaretlemeler +
   mood + görevler + seanslar). v1/v2/v3 yedekler içe aktarılabilir. **Birleştir** veya
   **Tamamen değiştir** seçenekleri.

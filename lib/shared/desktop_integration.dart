@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tray_manager/tray_manager.dart' as native;
+import 'package:nativeapi/nativeapi.dart' as native;
 import 'package:window_manager/window_manager.dart';
 
 import '../core/date_utils.dart';
@@ -9,11 +10,65 @@ import '../core/enums.dart';
 import '../data/models/habit_today_view.dart';
 import '../data/providers.dart';
 
-/// Minimize-to-tray + a quick-mark menu, kept in sync with today's habits.
+const _appId = 'com.aktenak.habit_tracker';
+const _appDisplayName = 'Aktenak Habit Tracker';
+
+/// "Start at login" is a plain OS setting, not app state — reading and
+/// writing it straight from the native object avoids a DB-cached flag that
+/// could drift from what Windows/Linux actually has configured (e.g. after
+/// the user removes it themselves from system settings).
+class LaunchAtLoginSetting {
+  static bool get isSupported {
+    if (!(Platform.isWindows || Platform.isLinux)) return false;
+    try {
+      return native.LaunchAtLogin.isSupported();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static bool get isEnabled {
+    final instance = _open();
+    if (instance == null) return false;
+    try {
+      return instance.isEnabled;
+    } finally {
+      instance.dispose();
+    }
+  }
+
+  /// Returns whether the toggle now matches [value].
+  static bool setEnabled(bool value) {
+    final instance = _open();
+    if (instance == null) return false;
+    try {
+      instance.setProgram(Platform.resolvedExecutable, const []);
+      return value ? instance.enable() : instance.disable();
+    } finally {
+      instance.dispose();
+    }
+  }
+
+  static native.LaunchAtLogin? _open() {
+    if (!isSupported) return null;
+    try {
+      return native.LaunchAtLogin.createWithIdAndDisplayName(
+        _appId,
+        _appDisplayName,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+/// Minimize-to-tray with a quick-mark menu, plus an evening reminder
+/// notification — everything that has to reach past the widget tree into
+/// real OS integration.
 ///
-/// Lives outside the widget tree (driven by a [ProviderContainer], not a
-/// `Consumer`) so `flutter test` — which never calls [init] — never touches
-/// the tray/window platform channels that widget tests cannot provide.
+/// Driven by a [ProviderContainer] rather than a `Consumer` so `flutter
+/// test` — which never calls [init] — never touches the tray/window/
+/// notification platform channels widget tests cannot provide.
 /// Windows/Linux only; macOS/mobile builds skip it entirely.
 class TrayService with WindowListener {
   TrayService(this._container);
@@ -28,10 +83,19 @@ class TrayService with WindowListener {
   native.Image? _iconImage;
   native.Menu? _menu;
   final List<native.MenuItem> _menuItems = [];
-  bool _ready = false;
+  bool _trayReady = false;
+
+  bool _notificationsReady = false;
+  Timer? _reminderTimer;
+  String? _lastReminderedDate;
 
   Future<void> init() async {
     if (!(Platform.isWindows || Platform.isLinux)) return;
+    await _initTray();
+    await _initNotifications();
+  }
+
+  Future<void> _initTray() async {
     try {
       await windowManager.ensureInitialized();
       await windowManager.setPreventClose(true);
@@ -52,11 +116,11 @@ class TrayService with WindowListener {
       trayIcon.addListener((event) {
         if (event is native.TrayIconClickedEvent) windowManager.show();
       });
-      _ready = true;
+      _trayReady = true;
 
       _container.listen<AsyncValue<List<HabitTodayView>>>(
         todayViewsProvider,
-        (_, next) => _refresh(next.value),
+        (_, next) => _refreshTray(next.value),
         fireImmediately: true,
       );
     } catch (_) {
@@ -65,9 +129,48 @@ class TrayService with WindowListener {
     }
   }
 
-  void _refresh(List<HabitTodayView>? views) {
+  Future<void> _initNotifications() async {
+    try {
+      if (!native.NotificationManager.instance.isSupported()) return;
+      if (!native.NotificationManager.instance.initialize()) return;
+      _notificationsReady = true;
+
+      _reminderTimer?.cancel();
+      _reminderTimer = Timer.periodic(
+        const Duration(minutes: 5),
+        (_) => _maybeRemind(),
+      );
+      _maybeRemind(); // also catches "opened the app after the hour"
+    } catch (_) {
+      // Same story: no reminder beats a crashed app.
+    }
+  }
+
+  void _maybeRemind() {
+    if (!_notificationsReady) return;
+    final hour = _container.read(reminderHourProvider);
+    if (hour == null || DateTime.now().hour < hour) return;
+
+    final today = _container.read(todayProvider);
+    final todayStr = formatYmd(today);
+    if (_lastReminderedDate == todayStr) return;
+
+    final views = _container.read(todayViewsProvider).value ?? const [];
+    final pending = views.where((v) => v.scheduledToday && !v.doneToday).length;
+    if (pending == 0) return;
+
+    final shown = native.NotificationManager.instance.show(
+      'Aktenak',
+      '$pending alışkanlık bugün için hâlâ bekliyor.',
+      'evening-reminder-$todayStr',
+      '',
+    );
+    if (shown) _lastReminderedDate = todayStr;
+  }
+
+  void _refreshTray(List<HabitTodayView>? views) {
     final trayIcon = _trayIcon;
-    if (!_ready || trayIcon == null) return;
+    if (!_trayReady || trayIcon == null) return;
 
     final scheduled = (views ?? const <HabitTodayView>[])
         .where((v) => v.scheduledToday)
