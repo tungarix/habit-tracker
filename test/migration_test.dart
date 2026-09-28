@@ -6,40 +6,63 @@ import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Runs the v2 -> v3 migration against a **copy of the real database** and
-/// checks that nothing was lost.
+/// Runs the v2 -> v4 migration against a **synthetic v2-shaped database**
+/// and checks that nothing is lost.
 ///
-/// A migration that passes on synthetic rows and eats the user's history is
-/// the failure mode worth guarding, so this test points at the actual backup
-/// taken before the schema change. It skips silently on machines that do not
-/// have that file (CI, a fresh clone).
+/// A migration that passes on freshly-inserted current-schema rows and eats
+/// real v2 data is the failure mode worth guarding, so this builds a
+/// database the normal (v4) way and then performs the same "wind it back"
+/// surgery as the half-applied-upgrade test below — dropping the columns
+/// and tables v3/v4 added — rather than depending on a real backup file
+/// that only ever existed on one machine (which meant this test silently
+/// skipped everywhere else, CI included, and never actually ran).
 void main() {
-  final backup = File(
-    r'C:\Users\user\AppData\Roaming\com.aktenak\aktenak_habit_tracker'
-    r'\aktenak.sqlite.faz0-backup-20260810',
-  );
-
-  test('migrating the real v2 database preserves every row', () async {
-    if (!backup.existsSync()) {
-      markTestSkipped('No local v2 backup at ${backup.path}');
-      return;
-    }
-
+  test('migrating a v2-shaped database preserves every row', () async {
     final temp = await Directory.systemTemp.createTemp('aktenak_migration');
-    final work = File('${temp.path}/aktenak.sqlite');
-    await backup.copy(work.path);
+    final file = File('${temp.path}/aktenak.sqlite');
     addTearDown(() => temp.delete(recursive: true));
 
-    final db = AppDatabase.forTesting(NativeDatabase(work));
+    // Build a healthy current-version database with the v2 snapshot's shape:
+    // 3 habits, a handful of ✓ marks.
+    final seed = AppDatabase.forTesting(NativeDatabase(file));
+    final names = ['Egzersiz', '10 bin adım', 'Gitar'];
+    final habitIds = <int>[];
+    for (final name in names) {
+      habitIds.add(await seed.insertHabit(HabitsCompanion.insert(
+        name: name,
+        colorValue: 0xFF4CAF50,
+        iconCodePoint: 0xe000,
+      )));
+    }
+    final dates = ['2026-06-24', '2026-07-01', '2026-07-30'];
+    for (final habitId in habitIds) {
+      for (final date in dates) {
+        await seed.setEntryStatus(habitId, date, EntryStatus.done);
+      }
+    }
+    await seed.close();
+
+    // Wind it back to v2's shape: drop what v3 (kind/target/value) and v4
+    // (tasks/focus_sessions) added, and roll the stamped version back.
+    final winder = AppDatabase.forTesting(NativeDatabase(file));
+    await winder.customStatement('ALTER TABLE habits DROP COLUMN kind');
+    await winder.customStatement('ALTER TABLE habits DROP COLUMN target');
+    await winder
+        .customStatement('ALTER TABLE habit_entries DROP COLUMN value');
+    await winder.customStatement('DROP TABLE tasks');
+    await winder.customStatement('DROP TABLE focus_sessions');
+    await winder.customStatement('PRAGMA user_version = 2');
+    await winder.close();
+
+    // Reopening must drive the v2 -> v3 -> v4 migration.
+    final db = AppDatabase.forTesting(NativeDatabase(file));
     addTearDown(db.close);
 
-    // Opening + any query drives the migration.
     final habits = await db.getAllHabits();
     final entries = await db.getAllEntries();
 
-    // The v2 snapshot: 10 habits, 19 marks, all of them ✓.
-    expect(habits, hasLength(10));
-    expect(entries, hasLength(19));
+    expect(habits, hasLength(3));
+    expect(entries, hasLength(9));
     expect(entries.every((e) => e.status == EntryStatus.done), isTrue);
 
     // Schema is at the current version.
@@ -61,13 +84,9 @@ void main() {
     expect(entries.every((e) => e.value == 1), isTrue);
 
     // Names and dates survived intact.
-    expect(
-      habits.map((h) => h.name),
-      containsAll(<String>['Egzersiz', '10 bin adım', 'Gitar']),
-    );
-    final dates = entries.map((e) => e.date).toSet();
-    expect(dates, contains('2026-06-24'));
-    expect(dates, contains('2026-07-30'));
+    expect(habits.map((h) => h.name), containsAll(names));
+    final survivingDates = entries.map((e) => e.date).toSet();
+    expect(survivingDates, containsAll(dates));
   });
 
   test('repairs a half-applied upgrade instead of wedging', () async {

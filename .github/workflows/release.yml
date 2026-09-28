@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+# En az yetki: release oluşturmak (contents), attestation üretmek
+# (id-token + attestations) için gerekenin ötesine çıkma.
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    # ci.yml ile aynı sebep: tray_manager/window_manager'ın native C++
+    # eklentileri gerçekten Windows'ta derlensin.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Bağımlılıkları kur
+        run: flutter pub get
+
+      - name: Testler (paketlemeden önce)
+        run: flutter test
+
+      - name: Windows derlemesi
+        run: flutter build windows --release
+
+      - name: Zip'le
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          Compress-Archive -Path "build/windows/x64/runner/Release/*" -DestinationPath "aktenak-habit-tracker-$version-windows.zip"
+
+      - name: SHA256 hesapla
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          $zip = "aktenak-habit-tracker-$version-windows.zip"
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  $zip" | Set-Content -Path SHA256SUMS.txt -Encoding ascii
+
+      - name: Build provenance attestation üret
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: aktenak-habit-tracker-*-windows.zip
+
+      - name: Taslak (draft) release oluştur
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "${{ github.ref_name }}"
+          aktenak-habit-tracker-*-windows.zip SHA256SUMS.txt
+          --draft
+          --title "Aktenak Habit Tracker ${{ github.ref_name }}"
+          --notes ""
+
+      - name: Artifact olarak yükle (yalnızca manuel çalıştırma)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aktenak-habit-tracker-windows
+          path: |
+            aktenak-habit-tracker-*-windows.zip
+            SHA256SUMS.txt

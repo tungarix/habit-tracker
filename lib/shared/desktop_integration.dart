@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nativeapi/nativeapi.dart' as native;
 import 'package:window_manager/window_manager.dart';
 
+import '../core/constants.dart';
 import '../core/date_utils.dart';
 import '../core/enums.dart';
 import '../data/models/habit_today_view.dart';
@@ -49,6 +50,18 @@ class LaunchAtLoginSetting {
     }
   }
 
+  /// Re-registers the current executable path if "start at login" is on.
+  ///
+  /// Call once at startup: this is a portable app, so a version moved to a
+  /// new folder (or replaced in place by unzipping a newer release) would
+  /// otherwise leave Windows/Linux pointed at a path that may no longer
+  /// hold this exe — `setEnabled` only refreshes the path when the toggle
+  /// itself is flipped, which doesn't happen on every launch.
+  static void syncPathIfEnabled() {
+    if (!isEnabled) return;
+    setEnabled(true);
+  }
+
   static native.LaunchAtLogin? _open() {
     if (!isSupported) return null;
     try {
@@ -91,6 +104,12 @@ class TrayService with WindowListener {
 
   Future<void> init() async {
     if (!(Platform.isWindows || Platform.isLinux)) return;
+    try {
+      LaunchAtLoginSetting.syncPathIfEnabled();
+    } catch (_) {
+      // Best-effort — a stale launch-at-login path is a papercut, not a
+      // reason to fail startup.
+    }
     await _initTray();
     await _initNotifications();
   }
@@ -135,6 +154,12 @@ class TrayService with WindowListener {
       if (!native.NotificationManager.instance.initialize()) return;
       _notificationsReady = true;
 
+      // Restored so a same-day restart (e.g. via tray Çıkış + reopen)
+      // doesn't re-fire a reminder already shown before the restart.
+      _lastReminderedDate = await _container
+          .read(databaseProvider)
+          .getSetting(AppConstants.lastReminderDateKey);
+
       _reminderTimer?.cancel();
       _reminderTimer = Timer.periodic(
         const Duration(minutes: 5),
@@ -165,7 +190,12 @@ class TrayService with WindowListener {
       'evening-reminder-$todayStr',
       '',
     );
-    if (shown) _lastReminderedDate = todayStr;
+    if (shown) {
+      _lastReminderedDate = todayStr;
+      _container
+          .read(databaseProvider)
+          .setSetting(AppConstants.lastReminderDateKey, todayStr);
+    }
   }
 
   void _refreshTray(List<HabitTodayView>? views) {

@@ -27,6 +27,10 @@ class AppConstants {
 
   /// Default hour offered when the reminder is first turned on.
   static const int defaultReminderHour = 20;
+
+  /// Settings key for the date (`YYYY-MM-DD`) the evening reminder last
+  /// fired on — persisted so a restart the same evening doesn't re-notify.
+  static const String lastReminderDateKey = 'lastReminderDate';
 }
 
 /// Short labels for the days of the week (Mon..Sun -> index 0..6).
