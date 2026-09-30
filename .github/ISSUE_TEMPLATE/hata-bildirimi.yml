@@ -1,0 +1,73 @@
+name: "🐞 Hata bildirimi / Bug report"
+description: Bir şey beklendiği gibi çalışmıyor. / Something isn't working as expected.
+title: "[Hata/Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Türkçe ya da İngilizce yazabilirsin, hangisi rahatsa. /
+        Feel free to write in Turkish or English.
+
+        **Veritabanını ya da yedek (JSON) dosyanı EKLEME** — kişisel alışkanlık ve mood verini içerir. /
+        **Do NOT attach your database or a JSON backup** — it contains your personal habit and mood data.
+
+  - type: dropdown
+    id: surum
+    attributes:
+      label: Uygulama sürümü / Version
+      description: >-
+        İndirdiğin sürüm; zip dosyasının adında yazar (ör. `v1.2.1`). Emin
+        değilsen [Releases](https://github.com/tungarix/habit-tracker/releases)
+        sayfasından kontrol et. / The release you downloaded; it is in the zip
+        file name (e.g. `v1.2.1`). If unsure, check the
+        [Releases](https://github.com/tungarix/habit-tracker/releases) page.
+      options:
+        - v1.2.1
+        - v1.2.0
+        - v1.1.0
+        - v1.0.0
+        - Bilmiyorum / Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows sürümü / Windows version
+      placeholder: "ör. / e.g. Windows 11 23H2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: adimlar
+    attributes:
+      label: Tekrar üretme adımları / Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: beklenen
+    attributes:
+      label: Beklenen davranış / Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: olan
+    attributes:
+      label: Gerçekleşen davranış / Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: ekran
+    attributes:
+      label: Ekran görüntüsü (opsiyonel) / Screenshot (optional)
+      description: Buraya sürükle bırak ya da yapıştır. / Drag and drop or paste here.
+    validations:
+      required: false

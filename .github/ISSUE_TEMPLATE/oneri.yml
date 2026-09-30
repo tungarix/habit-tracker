@@ -1,0 +1,34 @@
+name: "💡 Öneri / Feature request"
+description: Yeni bir özellik ya da iyileştirme öner. / Suggest a new feature or improvement.
+title: "[Öneri/Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Türkçe ya da İngilizce yazabilirsin. / Feel free to write in Turkish or English.
+
+        Uygulama bilerek yalnızca yerel: sunucu, hesap, login ve bulut / çoklu
+        cihaz senkronu kapsam dışı. / The app is local-only on purpose: a
+        server, accounts, login and cloud / multi-device sync are out of scope.
+
+  - type: textarea
+    id: sorun
+    attributes:
+      label: Hangi ihtiyacı ya da sorunu çözüyor? / What need or problem does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: cozum
+    attributes:
+      label: Önerdiğin çözüm / Your proposed solution
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatif
+    attributes:
+      label: Düşündüğün alternatifler (opsiyonel) / Alternatives considered (optional)
+    validations:
+      required: false
