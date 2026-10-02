@@ -20,6 +20,15 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Güvenlik kapısı önceki etiketi ve incelenen commit'i görmeli.
+          fetch-depth: 0
+
+      # Etiketli sürümde, o sürümün güvenlik incelemesi kayıtlı ve güncel değilse
+      # derleme başlamaz. Biçim: guvenlik/incelemeler/README.md
+      - name: Güvenlik kapısı
+        if: startsWith(github.ref, 'refs/tags/')
+        run: python scripts/guvenlik_kapisi.py "${{ github.ref_name }}"
 
       - uses: subosito/flutter-action@v2
         with:
