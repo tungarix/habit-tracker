@@ -111,7 +111,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         title: const Text('İçe aktarma modu'),
         content: const Text(
           'Mevcut verilerle nasıl birleştirilsin?\n\n'
-          '• Birleştir: aynı gün+alışkanlık varsa üzerine yazılır, gerisi korunur.\n'
+          '• Birleştir: aynı alışkanlık/görev güncellenir, farklı olanlar yeni olarak '
+          'eklenir. Aynı gün+alışkanlık kaydının üzerine yazılır; aynı odak seansı '
+          'tekrar eklenmez.\n'
           '• Tamamen değiştir: mevcut tüm veriler silinir.',
         ),
         actions: [
