@@ -313,6 +313,7 @@ class _MomentumCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     final day = ref.watch(todayProvider);
+    final dayStartHour = ref.watch(dayStartHourProvider);
     final statuses = ref.watch(statusesByHabitProvider).value ??
         const <int, Map<String, EntryStatus>>{};
     final values = ref.watch(valuesByHabitProvider);
@@ -347,6 +348,7 @@ class _MomentumCard extends ConsumerWidget {
                   statuses: statuses[h.id] ?? const {},
                   values: values[h.id] ?? const {},
                   day: day,
+                  dayStartHour: dayStartHour,
                 ),
                 if (h != habits.last) const SizedBox(height: 10),
               ],
@@ -362,20 +364,35 @@ class _MomentumRow extends StatelessWidget {
   final Map<String, EntryStatus> statuses;
   final Map<String, int> values;
   final DateTime day;
+  final int dayStartHour;
 
   const _MomentumRow({
     required this.habit,
     required this.statuses,
     required this.values,
     required this.day,
+    required this.dayStartHour,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final color = Color(habit.colorValue);
-    final points = habitHeatPoints(habit, statuses, values, day, 30);
-    final week = habitHeatmap(habit, statuses, day, 7);
+    final points = habitHeatPoints(
+      habit,
+      statuses,
+      values,
+      day,
+      30,
+      dayStartHour: dayStartHour,
+    );
+    final week = habitHeatmap(
+      habit,
+      statuses,
+      day,
+      7,
+      dayStartHour: dayStartHour,
+    );
     final weekDone = week.where((c) => c == HeatCell.done).length;
     final weekActive = week.where((c) => c != HeatCell.inactive).length;
     final pct = weekActive == 0 ? 0 : (weekDone / weekActive * 100).round();

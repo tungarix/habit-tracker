@@ -242,6 +242,7 @@ final todayViewsProvider = Provider<AsyncValue<List<HabitTodayView>>>((ref) {
   final habits = habitsAsync.value!;
   final byHabit = statusesAsync.value!;
   final t = ref.watch(todayProvider);
+  final dayStartHour = ref.watch(dayStartHourProvider);
   final tStr = formatYmd(t);
 
   final views = [
@@ -254,6 +255,7 @@ final todayViewsProvider = Provider<AsyncValue<List<HabitTodayView>>>((ref) {
           h,
           byHabit[h.id] ?? const <String, EntryStatus>{},
           t,
+          dayStartHour: dayStartHour,
         ),
       ),
   ];
@@ -302,7 +304,12 @@ final habitStatsProvider = Provider.family<AsyncValue<HabitStats>, int>((
   final statuses =
       statusesAsync.value![habitId] ?? const <String, EntryStatus>{};
   return AsyncValue.data(
-    computeStats(habit, statuses, ref.watch(todayProvider)),
+    computeStats(
+      habit,
+      statuses,
+      ref.watch(todayProvider),
+      dayStartHour: ref.watch(dayStartHourProvider),
+    ),
   );
 });
 
@@ -377,7 +384,13 @@ final weekCompletionProvider = Provider<double>((ref) {
   final byHabit =
       ref.watch(statusesByHabitProvider).value ??
       const <int, Map<String, EntryStatus>>{};
-  return lastNDaysCompletion(habits, byHabit, ref.watch(todayProvider), 7);
+  return lastNDaysCompletion(
+    habits,
+    byHabit,
+    ref.watch(todayProvider),
+    7,
+    dayStartHour: ref.watch(dayStartHourProvider),
+  );
 });
 
 /// Aggregate numbers shown on the Stats overview.
@@ -408,6 +421,7 @@ final overviewProvider = Provider<OverviewStats>((ref) {
   ];
   final byHabit = ref.watch(statusesByHabitProvider).value ?? const {};
   final t = ref.watch(todayProvider);
+  final dayStartHour = ref.watch(dayStartHourProvider);
   final monthPrefix = formatYmd(t).substring(0, 7); // YYYY-MM
 
   int total = 0, thisMonth = 0, bestCur = 0, bestLong = 0;
@@ -418,7 +432,7 @@ final overviewProvider = Provider<OverviewStats>((ref) {
       total++;
       if (entry.key.startsWith(monthPrefix)) thisMonth++;
     }
-    final s = computeStreaks(h, statuses, t);
+    final s = computeStreaks(h, statuses, t, dayStartHour: dayStartHour);
     if (s.current > bestCur) bestCur = s.current;
     if (s.longest > bestLong) bestLong = s.longest;
   }

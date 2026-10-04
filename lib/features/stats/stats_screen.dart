@@ -24,6 +24,7 @@ class StatsScreen extends ConsumerWidget {
     final moodByDate = ref.watch(moodByDateProvider);
     final overview = ref.watch(overviewProvider);
     final t = ref.watch(todayProvider);
+    final dayStartHour = ref.watch(dayStartHourProvider);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(8, 12, 8, 24),
@@ -49,6 +50,7 @@ class StatsScreen extends ConsumerWidget {
               habit: h,
               statuses: statusesByHabit[h.id] ?? const <String, EntryStatus>{},
               todayDate: t,
+              dayStartHour: dayStartHour,
             ),
           const SizedBox(height: 12),
         ],
@@ -60,6 +62,7 @@ class StatsScreen extends ConsumerWidget {
           statusesByHabit: statusesByHabit,
           moodByDate: moodByDate,
           todayDate: t,
+          dayStartHour: dayStartHour,
         ),
       ],
     );
@@ -176,16 +179,23 @@ class _HabitStatsCard extends StatelessWidget {
   final Habit habit;
   final Map<String, EntryStatus> statuses;
   final DateTime todayDate;
+  final int dayStartHour;
   const _HabitStatsCard({
     required this.habit,
     required this.statuses,
     required this.todayDate,
+    required this.dayStartHour,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final stats = computeStats(habit, statuses, todayDate);
+    final stats = computeStats(
+      habit,
+      statuses,
+      todayDate,
+      dayStartHour: dayStartHour,
+    );
     final category = HabitCategory.tryParse(habit.category);
 
     return Card(
@@ -234,7 +244,12 @@ class _HabitStatsCard extends StatelessWidget {
             Text('Son 30 gün',
                 style: TextStyle(fontSize: 11, color: colors.textDim)),
             const SizedBox(height: 6),
-            _TrendStrip(habit: habit, statuses: statuses, todayDate: todayDate),
+            _TrendStrip(
+              habit: habit,
+              statuses: statuses,
+              todayDate: todayDate,
+              dayStartHour: dayStartHour,
+            ),
           ],
         ),
       ),
@@ -263,10 +278,12 @@ class _TrendStrip extends StatelessWidget {
   final Habit habit;
   final Map<String, EntryStatus> statuses;
   final DateTime todayDate;
+  final int dayStartHour;
   const _TrendStrip({
     required this.habit,
     required this.statuses,
     required this.todayDate,
+    required this.dayStartHour,
   });
 
   static const _days = 30;
@@ -275,7 +292,13 @@ class _TrendStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     // Which cell is which state is a logic question, answered by core/.
-    final cells = habitHeatmap(habit, statuses, todayDate, _days);
+    final cells = habitHeatmap(
+      habit,
+      statuses,
+      todayDate,
+      _days,
+      dayStartHour: dayStartHour,
+    );
     final days = lastDays(todayDate, _days);
 
     return LayoutBuilder(builder: (context, c) {
@@ -317,11 +340,13 @@ class _MoodCorrelationCard extends StatelessWidget {
   final Map<int, Map<String, EntryStatus>> statusesByHabit;
   final Map<String, MoodEntry> moodByDate;
   final DateTime todayDate;
+  final int dayStartHour;
   const _MoodCorrelationCard({
     required this.habits,
     required this.statusesByHabit,
     required this.moodByDate,
     required this.todayDate,
+    required this.dayStartHour,
   });
 
   @override
@@ -334,6 +359,7 @@ class _MoodCorrelationCard extends StatelessWidget {
       statusesByHabit,
       moodByDate,
       todayDate,
+      dayStartHour: dayStartHour,
     );
     final totalDays = correlation.sampleDays;
 

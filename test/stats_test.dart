@@ -115,8 +115,10 @@ void main() {
     });
 
     test('days before the habit existed are inactive', () {
+      // Created at noon: a midnight timestamp would belong to the previous
+      // tracking day (before 04:00), which is covered in night_creation_test.
       final cells = habitHeatmap(
-        testHabit(id: 1, createdAt: DateTime(2026, 6, 29)),
+        testHabit(id: 1, createdAt: DateTime(2026, 6, 29, 12)),
         const {},
         DateTime(2026, 6, 30),
         3, // 6/28, 6/29, 6/30

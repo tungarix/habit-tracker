@@ -108,7 +108,7 @@ class TaskRow extends ConsumerWidget {
       case DueBucket.tomorrow:
         return 'yarın';
       case DueBucket.overdue:
-        final days = today.difference(parseYmd(dueDay)).inDays;
+        final days = calendarDaysBetween(parseYmd(dueDay), today);
         return '$days gün geçti';
       default:
         final d = parseYmd(dueDay);

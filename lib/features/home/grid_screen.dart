@@ -237,8 +237,9 @@ class _GridScreenState extends ConsumerState<GridScreen> {
 }
 
 /// One habit's row of day cells. Stateless w.r.t. entry data — each cell
-/// subscribes to its own status.
-class _HabitRow extends StatelessWidget {
+/// subscribes to its own status. Only the day-start setting is watched here,
+/// to find the habit's first *tracking* day.
+class _HabitRow extends ConsumerWidget {
   final Habit habit;
   final DateTime month;
   final int days;
@@ -255,14 +256,23 @@ class _HabitRow extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final created = dateOnly(habit.createdAt);
+  Widget build(BuildContext context, WidgetRef ref) {
+    // The tracking day the habit was created on, not the calendar day: a habit
+    // added at 01:30 started on the day that was still running, so that cell
+    // must stay markable.
+    final created = dayOf(
+      habit.createdAt,
+      dayStartHour: ref.watch(dayStartHourProvider),
+    );
     return SizedBox(
       height: rowH,
       child: Row(
         children: [
           for (var d = 1; d <= days; d++)
             _GridCell(
+              key: ValueKey(
+                'grid-cell-${habit.id}-${formatYmd(DateTime(month.year, month.month, d))}',
+              ),
               habit: habit,
               day: DateTime(month.year, month.month, d),
               created: created,
@@ -286,6 +296,7 @@ class _GridCell extends ConsumerWidget {
   final double cellW;
   final double rowH;
   const _GridCell({
+    super.key,
     required this.habit,
     required this.day,
     required this.created,

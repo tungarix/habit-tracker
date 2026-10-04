@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/database/database.dart';
+import 'constants.dart';
 import 'date_utils.dart';
 import 'enums.dart';
 
@@ -17,16 +18,21 @@ import 'enums.dart';
 /// Skipped (–) days are excluded from the denominator, habits created after
 /// [day] are ignored, and `null` is returned when nothing was scheduled at all
 /// (so an off-day never reads as "0% completed").
+///
+/// "Created after [day]" is judged on the tracking day the habit was created
+/// on ([dayOf] with [dayStartHour]), so a habit added at 01:30 already counts
+/// for the day that was still running.
 double? dayCompletionRate(
   List<Habit> habits,
   Map<int, Map<String, EntryStatus>> statusesByHabit,
-  DateTime day,
-) {
+  DateTime day, {
+  int dayStartHour = AppConstants.defaultDayStartHour,
+}) {
   final dateStr = formatYmd(day);
   int scheduled = 0;
   int done = 0;
   for (final h in habits) {
-    if (dateOnly(h.createdAt).isAfter(day)) continue;
+    if (dayOf(h.createdAt, dayStartHour: dayStartHour).isAfter(day)) continue;
     if (!isScheduledOn(h.scheduledWeekdays, day)) continue;
     final status = (statusesByHabit[h.id] ?? const {})[dateStr];
     if (status == EntryStatus.skipped) continue;
@@ -43,11 +49,17 @@ List<double?> dailyCompletionSeries(
   List<Habit> habits,
   Map<int, Map<String, EntryStatus>> statusesByHabit,
   DateTime endDay,
-  int count,
-) {
+  int count, {
+  int dayStartHour = AppConstants.defaultDayStartHour,
+}) {
   return [
     for (final day in lastDays(endDay, count))
-      dayCompletionRate(habits, statusesByHabit, day),
+      dayCompletionRate(
+        habits,
+        statusesByHabit,
+        day,
+        dayStartHour: dayStartHour,
+      ),
   ];
 }
 
@@ -57,11 +69,16 @@ double lastNDaysCompletion(
   List<Habit> habits,
   Map<int, Map<String, EntryStatus>> statusesByHabit,
   DateTime endDay,
-  int count,
-) {
-  final series = dailyCompletionSeries(habits, statusesByHabit, endDay, count)
-      .whereType<double>()
-      .toList();
+  int count, {
+  int dayStartHour = AppConstants.defaultDayStartHour,
+}) {
+  final series = dailyCompletionSeries(
+    habits,
+    statusesByHabit,
+    endDay,
+    count,
+    dayStartHour: dayStartHour,
+  ).whereType<double>().toList();
   if (series.isEmpty) return 0;
   return series.reduce((a, b) => a + b) / series.length;
 }
@@ -82,13 +99,15 @@ enum HeatCell {
 }
 
 /// Heatmap strip for one habit: [count] days ending at [endDay], oldest first.
+/// The habit's first day is its creation *tracking* day ([dayStartHour]).
 List<HeatCell> habitHeatmap(
   Habit habit,
   Map<String, EntryStatus> statuses,
   DateTime endDay,
-  int count,
-) {
-  final created = dateOnly(habit.createdAt);
+  int count, {
+  int dayStartHour = AppConstants.defaultDayStartHour,
+}) {
+  final created = dayOf(habit.createdAt, dayStartHour: dayStartHour);
   return [
     for (final day in lastDays(endDay, count))
       switch (statuses[formatYmd(day)]) {
@@ -122,9 +141,16 @@ List<HeatPoint> habitHeatPoints(
   Map<String, EntryStatus> statuses,
   Map<String, int> values,
   DateTime endDay,
-  int count,
-) {
-  final cells = habitHeatmap(habit, statuses, endDay, count);
+  int count, {
+  int dayStartHour = AppConstants.defaultDayStartHour,
+}) {
+  final cells = habitHeatmap(
+    habit,
+    statuses,
+    endDay,
+    count,
+    dayStartHour: dayStartHour,
+  );
   final days = lastDays(endDay, count);
   final isCount = habit.kind == 'count' && habit.target > 1;
 
@@ -199,8 +225,9 @@ MoodCorrelation moodCompletionCorrelation(
   List<Habit> habits,
   Map<int, Map<String, EntryStatus>> statusesByHabit,
   Map<String, MoodEntry> moodByDate,
-  DateTime endDay,
-) {
+  DateTime endDay, {
+  int dayStartHour = AppConstants.defaultDayStartHour,
+}) {
   final sums = <int, double>{};
   final counts = <int, int>{};
   final moodSamples = <double>[];
@@ -209,7 +236,12 @@ MoodCorrelation moodCompletionCorrelation(
   for (final entry in moodByDate.values) {
     final day = parseYmd(entry.date);
     if (day.isAfter(endDay)) continue;
-    final rate = dayCompletionRate(habits, statusesByHabit, day);
+    final rate = dayCompletionRate(
+      habits,
+      statusesByHabit,
+      day,
+      dayStartHour: dayStartHour,
+    );
     if (rate == null) continue;
     sums[entry.mood] = (sums[entry.mood] ?? 0) + rate;
     counts[entry.mood] = (counts[entry.mood] ?? 0) + 1;

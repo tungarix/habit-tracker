@@ -54,7 +54,12 @@ void _celebrateMilestone(
     ...ref.read(habitStatusesProvider(habit.id)),
     dateStr: EntryStatus.done,
   };
-  final streak = computeStreaks(habit, statuses, day).current;
+  final streak = computeStreaks(
+    habit,
+    statuses,
+    day,
+    dayStartHour: ref.read(dayStartHourProvider),
+  ).current;
   if (streak <= 0 || streak % 7 != 0) return;
 
   ScaffoldMessenger.of(context)

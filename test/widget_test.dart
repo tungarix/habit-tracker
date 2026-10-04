@@ -147,7 +147,9 @@ void main() {
     });
 
     test('skipped days are excluded from the denominator', () {
-      final habit = _habit(createdAt: DateTime(2026, 6, 20));
+      // Noon, not midnight: before 04:00 a creation stamp counts for the
+      // previous tracking day (see night_creation_test.dart).
+      final habit = _habit(createdAt: DateTime(2026, 6, 20, 12));
       final todayDate = DateTime(2026, 6, 23); // 4 days total
       final stats = computeStats(
         habit,

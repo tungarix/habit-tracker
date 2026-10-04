@@ -87,10 +87,32 @@ int daysInMonth(DateTime month) => DateTime(month.year, month.month + 1, 0).day;
 /// First day of the month containing [d].
 DateTime firstOfMonth(DateTime d) => DateTime(d.year, d.month, 1);
 
+/// The calendar day after [d] (date-only, local time).
+///
+/// Always step days with this (or [previousDay]), never with
+/// `d.add(const Duration(days: 1))`: that adds 24 *hours*, and on a daylight
+/// saving changeover a local midnight plus 24 h lands on 23:00 the same day
+/// (or 01:00 the next one), so a day is counted twice or skipped.
+DateTime nextDay(DateTime d) => DateTime(d.year, d.month, d.day + 1);
+
+/// The calendar day before [d] (date-only, local time). See [nextDay].
+DateTime previousDay(DateTime d) => DateTime(d.year, d.month, d.day - 1);
+
+/// Whole calendar days from [from] to [to] (negative when [to] is earlier).
+///
+/// Only the calendar date counts, never the time of day. The difference is
+/// taken between UTC dates, which have no daylight saving, so a 23- or
+/// 25-hour local day still counts as exactly one day (`Duration.inDays` on two
+/// local dates would truncate a 23-hour day to 0).
+int calendarDaysBetween(DateTime from, DateTime to) =>
+    DateTime.utc(to.year, to.month, to.day)
+        .difference(DateTime.utc(from.year, from.month, from.day))
+        .inDays;
+
 /// Inclusive list of dates from [start] to [end] (both date-only).
 List<DateTime> daysBetween(DateTime start, DateTime end) {
   final result = <DateTime>[];
-  for (var d = dateOnly(start); !d.isAfter(end); d = d.add(const Duration(days: 1))) {
+  for (var d = dateOnly(start); !d.isAfter(end); d = nextDay(d)) {
     result.add(d);
   }
   return result;

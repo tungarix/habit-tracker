@@ -28,7 +28,9 @@ DueBucket bucketFor(Task task, DateTime todayDay) {
   if (due == null || due.isEmpty) return DueBucket.someday;
 
   final dueDay = parseYmd(due);
-  final diff = dueDay.difference(todayDay).inDays;
+  // Calendar-day difference: `difference().inDays` counts 24-hour blocks, so
+  // a 23-hour daylight-saving day would read one day too early.
+  final diff = calendarDaysBetween(todayDay, dueDay);
   if (diff < 0) return DueBucket.overdue;
   if (diff == 0) return DueBucket.today;
   if (diff == 1) return DueBucket.tomorrow;
