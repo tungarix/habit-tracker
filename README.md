@@ -45,21 +45,30 @@ sekmesini kullanabilirsin.
 - **Alışkanlıklar**: oluştur / düzenle / arşivle / sil. Ad, açıklama, **tür**
   (yap-yapma / sayılabilir + günlük hedef), **kategori** (Beden/Konuşma/Zihin), renk,
   ikon ve planlı günler (boş = her gün).
-- **Tema**: karanlık varsayılan, tek dokunuşla açık temaya geçiş (tercih kalıcı). Her iki
+- **Tema**: koyu varsayılan; açık ya da **sistem** (Windows temasını takip eder) seçilebilir
+  — üst çubuktaki düğme üçü arasında döner, Ayarlar'da da seçilir (tercih kalıcı). Her iki
   temada da metin/durum renkleri WCAG AA kontrast eşiğini (4.5:1) geçer.
+- **Pencere**: boyutu, konumu ve büyütülmüş hali hatırlanır. Kayıtlı yer artık bağlı
+  olmayan bir monitördeyse varsayılan yerde açılır.
 - **Sistem tepsisi** (Windows/Linux): pencereyi kapatmak uygulamayı kapatmaz, tepsiye
   küçültür — tepsi ipucu bugünkü `X/Y` durumunu gösterir, sağ tık menüsünden bugün için
   bekleyen alışkanlıkları tek tıkla ✓ işaretleyebilirsin. Tamamen çıkmak için menüdeki
   **Çıkış**.
 - **Klavye kısayolları**: Ctrl+1..4 sekmeler arası geçiş, Ctrl+N alışkanlık ekler.
 - **Ayarlar** (Yedek & Ayarlar): Windows başlangıcında otomatik açılma (kapalı başlar,
-  isteğe bağlı) ve akşam hatırlatıcısı — seçtiğin saatte bekleyen alışkanlık varsa bir
-  bildirim gösterir.
+  isteğe bağlı; açıksa oturum açılışında pencere fırlamaz, uygulama tepside başlar) ve
+  akşam hatırlatıcısı — seçtiğin saatte bekleyen alışkanlık varsa bir bildirim gösterir.
 - **Yedek**: tüm veri tek `.json` dosyası (format v4: alışkanlıklar + işaretlemeler +
   mood + görevler + seanslar). v1/v2/v3 yedekler içe aktarılabilir. **Birleştir** veya
   **Tamamen değiştir** seçenekleri.
+- **Otomatik yedek**: her gün bir kez veri klasöründeki `yedekler/` altına tam JSON yedek
+  alınır, son 14 gün saklanır (elle aldığın yedeklere dokunulmaz). Ayarlar'da veri
+  klasörünün yolu görünür, **Klasörü aç** / **Yedekleri aç** ile açılır.
 
 Veri tamamen yerel: drift (SQLite) ile cihazda saklanır. Sunucu, hesap, login yok.
+Windows'ta yeri `%APPDATA%\com.aktenak\aktenak_habit_tracker\` (v1.2.0–v1.2.1 yanlışlıkla
+`…\Aktenak Habit Tracker\` kullanıyordu; v1.3.0 oradaki veriyi ilk açılışta bir kez geri
+taşır).
 
 ## Kurallar (özet)
 

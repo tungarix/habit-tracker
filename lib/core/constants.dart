@@ -31,6 +31,10 @@ class AppConstants {
   /// Settings key for the date (`YYYY-MM-DD`) the evening reminder last
   /// fired on — persisted so a restart the same evening doesn't re-notify.
   static const String lastReminderDateKey = 'lastReminderDate';
+
+  /// Settings key for the window's last position/size
+  /// ([WindowPlacement.encode] format).
+  static const String windowPlacementKey = 'windowPlacement';
 }
 
 /// Short labels for the days of the week (Mon..Sun -> index 0..6).

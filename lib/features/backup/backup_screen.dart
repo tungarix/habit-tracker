@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/constants.dart';
 import '../../data/providers.dart';
@@ -180,6 +181,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             Card(
               child: Column(
                 children: [
+                  const _ThemeRow(),
+                  const Divider(height: 1),
                   if (LaunchAtLoginSetting.isSupported) ...[
                     SwitchListTile(
                       secondary: const Icon(Icons.power_settings_new),
@@ -240,6 +243,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+            Text('Veri', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            const _DataCard(),
             if (_busy) ...[
               const SizedBox(height: 24),
               const Center(child: CircularProgressIndicator()),
@@ -252,6 +259,84 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 }
 
 enum _ImportMode { merge, replace }
+
+class _ThemeRow extends ConsumerWidget {
+  const _ThemeRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Row(
+        children: [
+          Icon(
+            Icons.palette_outlined,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 16),
+          const Expanded(child: Text('Tema')),
+          SegmentedButton<ThemeMode>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: ThemeMode.system, label: Text('Sistem')),
+              ButtonSegment(value: ThemeMode.light, label: Text('Açık')),
+              ButtonSegment(value: ThemeMode.dark, label: Text('Koyu')),
+            ],
+            selected: {mode},
+            onSelectionChanged: (s) =>
+                ref.read(themeModeProvider.notifier).set(s.first),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Verilerim nerede?" — the data folder, and the daily auto-backups in it.
+class _DataCard extends ConsumerWidget {
+  const _DataCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dir = ref.watch(dataDirectoryProvider).value;
+    final backup = ref.watch(autoBackupProvider).value;
+    final latest = ref.watch(latestAutoBackupProvider).value;
+    final latestText = latest == null
+        ? 'Henüz yok — ilk yedek bugün alınır.'
+        : 'Son yedek: ${DateFormat('d MMMM y, HH:mm', 'tr').format(latest)}';
+
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.folder_outlined),
+            title: const Text('Verilerin burada'),
+            subtitle: SelectableText(dir?.path ?? '…'),
+            trailing: TextButton(
+              onPressed: dir == null ? null : () => openFolder(dir.path),
+              child: const Text('Klasörü aç'),
+            ),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.history),
+            title: const Text('Otomatik yedek'),
+            subtitle: Text(
+              'Her gün bir kez alınır, son 14 gün saklanır. $latestText',
+            ),
+            trailing: TextButton(
+              onPressed: backup == null || latest == null
+                  ? null
+                  : () => openFolder(backup.dir.path),
+              child: const Text('Yedekleri aç'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _ActionCard extends StatelessWidget {
   final IconData icon;

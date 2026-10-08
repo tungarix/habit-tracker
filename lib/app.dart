@@ -65,7 +65,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
+    final themeMode = ref.watch(themeModeProvider);
 
     return CallbackShortcuts(
       bindings: {
@@ -74,11 +74,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         SingleActivator(LogicalKeyboardKey.keyN, control: true): () =>
             HabitEditDialog.show(context),
       },
-      child: Focus(autofocus: true, child: _shell(colors, isDark)),
+      child: Focus(autofocus: true, child: _shell(colors, themeMode)),
     );
   }
 
-  Widget _shell(AppColors colors, bool isDark) {
+  Widget _shell(AppColors colors, ThemeMode themeMode) {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
@@ -114,11 +114,17 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ),
         actions: [
           IconButton(
-            tooltip: isDark ? 'Açık tema' : 'Karanlık tema',
-            icon: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-            ),
-            onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+            tooltip: switch (themeMode) {
+              ThemeMode.dark => 'Tema: koyu (açığa geç)',
+              ThemeMode.light => 'Tema: açık (sisteme uy)',
+              ThemeMode.system => 'Tema: sistem (koyuya geç)',
+            },
+            icon: Icon(switch (themeMode) {
+              ThemeMode.dark => Icons.dark_mode_outlined,
+              ThemeMode.light => Icons.light_mode_outlined,
+              ThemeMode.system => Icons.brightness_auto_outlined,
+            }),
+            onPressed: () => ref.read(themeModeProvider.notifier).cycle(),
           ),
           IconButton(
             tooltip: 'Alışkanlık ekle (Ctrl+N)',

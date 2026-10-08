@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../core/constants.dart';
 import '../core/date_utils.dart';
@@ -10,6 +12,8 @@ import '../core/sessions.dart';
 import '../core/stats.dart';
 import '../core/streak.dart';
 import '../core/tasks.dart' as task_logic;
+import 'auto_backup.dart';
+import 'data_location.dart';
 import 'database/database.dart';
 import 'models/habit_today_view.dart';
 import 'repositories/backup_repository.dart';
@@ -40,11 +44,33 @@ final sessionRepositoryProvider = Provider<SessionRepository>(
   (ref) => SessionRepository(ref.watch(databaseProvider)),
 );
 
+/// Where the database (and the `yedekler/` auto-backup folder) lives — the
+/// same directory `AppDatabase` opens its file in.
+final dataDirectoryProvider = FutureProvider<Directory>(
+  (ref) => appDataDirectory(),
+);
+
+final autoBackupProvider = FutureProvider<AutoBackup>((ref) async {
+  final dataDir = await ref.watch(dataDirectoryProvider.future);
+  return AutoBackup(
+    repo: ref.watch(backupRepositoryProvider),
+    dir: Directory(p.join(dataDir.path, 'yedekler')),
+  );
+});
+
+/// autoDispose: re-read on every visit to the settings screen, so it picks
+/// up the backup the hourly timer took while the app sat in the tray.
+final latestAutoBackupProvider = FutureProvider.autoDispose<DateTime?>(
+  (ref) async => (await ref.watch(autoBackupProvider.future)).latest(),
+);
+
 // -----------------------------------------------------------------------------
 // Theme
 // -----------------------------------------------------------------------------
 
-/// Theme preference, persisted in the settings table. Dark is the default.
+/// Theme preference, persisted in the settings table. Dark is the default —
+/// `system` (follow Windows) is opt-in so nobody who never touched the
+/// setting suddenly flips to light.
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
@@ -56,18 +82,24 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
     final stored = await ref
         .read(databaseProvider)
         .getSetting(AppConstants.themeModeKey);
-    if (stored == 'light') state = ThemeMode.light;
+    for (final mode in ThemeMode.values) {
+      if (mode.name == stored) state = mode;
+    }
   }
 
-  Future<void> toggle() async {
-    state = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+  Future<void> set(ThemeMode mode) async {
+    state = mode;
     await ref
         .read(databaseProvider)
-        .setSetting(
-          AppConstants.themeModeKey,
-          state == ThemeMode.light ? 'light' : 'dark',
-        );
+        .setSetting(AppConstants.themeModeKey, mode.name);
   }
+
+  /// App-bar button: koyu → açık → sistem → koyu.
+  Future<void> cycle() => set(switch (state) {
+    ThemeMode.dark => ThemeMode.light,
+    ThemeMode.light => ThemeMode.system,
+    ThemeMode.system => ThemeMode.dark,
+  });
 }
 
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(

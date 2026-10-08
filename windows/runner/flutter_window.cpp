@@ -1,5 +1,6 @@
 #include "flutter_window.h"
 
+#include <cwchar>
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
@@ -27,8 +28,14 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
+  // "--tray": launched by the start-at-login entry, so start hidden in the
+  // tray instead of popping a window up at every login. The tray's "Aç"
+  // shows it later via window_manager.
+  const bool start_in_tray = wcsstr(GetCommandLineW(), L"--tray") != nullptr;
+  flutter_controller_->engine()->SetNextFrameCallback([this, start_in_tray]() {
+    if (!start_in_tray) {
+      this->Show();
+    }
   });
 
   // Flutter can complete the first frame before the "show window" callback is

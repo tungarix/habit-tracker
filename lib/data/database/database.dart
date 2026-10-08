@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import '../../core/constants.dart';
 import '../../core/enums.dart';
+import '../data_location.dart';
 import 'tables.dart';
 
 part 'database.g.dart';
@@ -371,7 +371,8 @@ class AppDatabase extends _$AppDatabase {
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final dir = await getApplicationSupportDirectory();
+    final dir = await appDataDirectory();
+    await dir.create(recursive: true);
     final file = File(p.join(dir.path, AppConstants.dbFileName));
     return NativeDatabase.createInBackground(file);
   });

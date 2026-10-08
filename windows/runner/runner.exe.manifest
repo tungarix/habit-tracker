@@ -3,6 +3,11 @@
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
       <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+      <!-- nativeapi writes the start-at-login entry with RegSetValueExA, passing
+           UTF-8. Without this the ANSI code page (cp1254) mangled any
+           non-ASCII path ("Yeni klasör" -> "Yeni klasÃ¶r") and the entry
+           never launched. Windows 10 1903+. -->
+      <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
     </windowsSettings>
   </application>
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
