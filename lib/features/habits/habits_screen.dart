@@ -48,9 +48,9 @@ class HabitsScreen extends ConsumerWidget {
                       final reordered = [...active];
                       final moved = reordered.removeAt(oldIndex);
                       reordered.insert(newIndex, moved);
-                      ref.read(habitRepositoryProvider).reorderHabits(
-                            reordered.map((h) => h.id).toList(),
-                          );
+                      ref
+                          .read(habitRepositoryProvider)
+                          .reorderHabits(reordered.map((h) => h.id).toList());
                     },
                     itemBuilder: (context, index) {
                       final h = active[index];
@@ -107,17 +107,22 @@ class _ActiveHabitTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final repo = ref.read(habitRepositoryProvider);
     final days = parseWeekdays(habit.scheduledWeekdays);
-    final schedule =
-        days.isEmpty ? 'Her gün' : days.map((d) => kWeekdayShort[d - 1]).join(' · ');
+    final schedule = days.isEmpty
+        ? 'Her gün'
+        : days.map((d) => kWeekdayShort[d - 1]).join(' · ');
     final category = HabitCategory.tryParse(habit.category);
-    final subtitle =
-        category == null ? schedule : '${category.label} · $schedule';
+    final subtitle = category == null
+        ? schedule
+        : '${category.label} · $schedule';
 
     return Card(
       child: ListTile(
         onTap: () => HabitEditDialog.show(context, existing: habit),
         leading: HabitAvatar(habit: habit),
-        title: Text(habit.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(
+          habit.name,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         subtitle: Text(subtitle),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -136,11 +141,14 @@ class _ActiveHabitTile extends ConsumerWidget {
                     HabitEditDialog.show(context, existing: habit);
                   case 'archive':
                     repo.archive(habit.id);
+                  case 'delete':
+                    confirmDeleteHabit(context, ref, habit, offerArchive: true);
                 }
               },
               itemBuilder: (_) => const [
                 PopupMenuItem(value: 'edit', child: Text('Düzenle')),
                 PopupMenuItem(value: 'archive', child: Text('Arşivle')),
+                PopupMenuItem(value: 'delete', child: Text('Sil…')),
               ],
             ),
           ],
@@ -174,7 +182,7 @@ class _ArchivedHabitTile extends ConsumerWidget {
               IconButton(
                 tooltip: 'Sil',
                 icon: const Icon(Icons.delete_outline),
-                onPressed: () => _confirmDelete(context, ref, habit),
+                onPressed: () => confirmDeleteHabit(context, ref, habit),
               ),
             ],
           ),
@@ -182,29 +190,42 @@ class _ArchivedHabitTile extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, Habit habit) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Kalıcı olarak sil?'),
-        content:
-            Text('"${habit.name}" ve tüm kayıtları silinecek. Bu geri alınamaz.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('İptal')),
-          FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sil'),
-          ),
-        ],
+/// Permanently deletes [habit] (and every mark on it) after a confirmation.
+///
+/// From the active list ([offerArchive]) the dialog points at "Arşivle" as the
+/// reversible alternative — deleting also wipes the streak and history.
+Future<void> confirmDeleteHabit(
+  BuildContext context,
+  WidgetRef ref,
+  Habit habit, {
+  bool offerArchive = false,
+}) async {
+  final repo = ref.read(habitRepositoryProvider);
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Kalıcı olarak sil?'),
+      content: Text(
+        '"${habit.name}" ve tüm kayıtları silinecek. Bu geri alınamaz.'
+        '${offerArchive ? '\n\nGeçmişi saklamak istiyorsan silmek yerine '
+                  'Arşivle.' : ''}',
       ),
-    );
-    if (ok == true) {
-      await ref.read(habitRepositoryProvider).delete(habit.id);
-    }
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('İptal'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(dialogContext).colorScheme.error,
+          ),
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Sil'),
+        ),
+      ],
+    ),
+  );
+  if (ok == true) await repo.delete(habit.id);
 }
