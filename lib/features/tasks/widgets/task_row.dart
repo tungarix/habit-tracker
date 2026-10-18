@@ -72,7 +72,7 @@ class TaskRow extends ConsumerWidget {
                     maxLines: dense ? 1 : 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: dense ? 12.5 : 13.5,
+                      fontSize: dense ? 12 : 14,
                       fontWeight:
                           status == TaskStatus.doing ? FontWeight.w700 : null,
                       color: isDone ? colors.textDim : colors.text,
@@ -90,7 +90,7 @@ class TaskRow extends ConsumerWidget {
                   Text(
                     _dueLabel(bucket, task.dueDay!, day),
                     style: kTabularNums.copyWith(
-                        fontSize: 11, color: dueColor),
+                        fontSize: 12, color: dueColor),
                   ),
                 ],
               ],

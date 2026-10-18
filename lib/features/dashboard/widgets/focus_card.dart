@@ -118,11 +118,13 @@ class _FocusCardState extends ConsumerState<FocusCard> {
                 const SizedBox(width: 8),
                 Text('Odak',
                     style: TextStyle(
-                        fontWeight: FontWeight.w700, color: colors.text)),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: colors.textDim)),
                 const Spacer(),
                 if (summary.dayStreak > 1)
                   Text('${summary.dayStreak} gün üst üste',
-                      style: TextStyle(fontSize: 11, color: colors.textDim)),
+                      style: TextStyle(fontSize: 12, color: colors.textDim)),
               ],
             ),
             const SizedBox(height: 14),
@@ -238,15 +240,15 @@ class _Chip extends StatelessWidget {
     final colors = AppColors.of(context);
     return Material(
       color: selected ? colors.surfaceAlt : Colors.transparent,
-      borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Container(
           height: 34,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: selected ? colors.done : colors.border,
             ),
@@ -254,7 +256,7 @@ class _Chip extends StatelessWidget {
           child: Text(
             label,
             style: kTabularNums.copyWith(
-              fontSize: 12.5,
+              fontSize: 12,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               color: selected ? colors.text : colors.textDim,
             ),
@@ -276,11 +278,11 @@ class _Stat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 10.5, color: colors.textDim)),
+        Text(label, style: TextStyle(fontSize: 12, color: colors.textDim)),
         const SizedBox(height: 2),
         Text(value,
             style: kTabularNums.copyWith(
-                fontSize: 15, fontWeight: FontWeight.w700, color: colors.text)),
+                fontSize: 14, fontWeight: FontWeight.w700, color: colors.text)),
       ],
     );
   }

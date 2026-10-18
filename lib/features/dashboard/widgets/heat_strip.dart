@@ -30,7 +30,11 @@ class HeatStrip extends StatelessWidget {
     final colors = AppColors.of(context);
     final days = lastDays(endDay, points.length);
 
-    return LayoutBuilder(builder: (context, c) {
+    // Sabit yükseklik: panelin IntrinsicHeight'ı LayoutBuilder'a soru sormadan
+    // şeridin boyunu bilsin diye.
+    return SizedBox(
+      height: cell,
+      child: LayoutBuilder(builder: (context, c) {
       // Shrink the cells rather than clipping when space is tight.
       final perCell = cell + gap;
       final fits = ((c.maxWidth + gap) / perCell).floor();
@@ -54,7 +58,8 @@ class HeatStrip extends StatelessWidget {
           ],
         ],
       );
-    });
+    }),
+    );
   }
 }
 
