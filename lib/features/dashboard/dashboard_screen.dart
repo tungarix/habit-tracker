@@ -25,6 +25,8 @@ class DashboardScreen extends ConsumerWidget {
   // Layout thresholds. Below the first the app is effectively a phone.
   static const _twoColumn = 760.0;
   static const _threeColumn = 1180.0;
+  // Card'ın kendi 4+4px kenar boşluğuyla birlikte kartlar arası 16px.
+  static const _gap = 8.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,35 +55,57 @@ class DashboardScreen extends ConsumerWidget {
           const _HeaderBar(),
           const SizedBox(height: 14),
           switch (columns) {
-            // No IntrinsicHeight here: the heat strips measure themselves with
-            // a LayoutBuilder, which cannot answer intrinsic-size queries.
-            // Columns simply size to their own content.
-            3 => Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(flex: 30, child: Column(children: [today, mood])),
-                  const SizedBox(width: 12),
-                  Expanded(flex: 40, child: momentum),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    flex: 30,
-                    child: Column(children: [focus, tasks]),
-                  ),
-                ],
+            // Sütunlar eşit boyda: son kart kalan yüksekliği doldurur. HeatStrip
+            // sabit yükseklikli olduğu için IntrinsicHeight ölçebiliyor.
+            3 => IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(flex: 30, child: _FillColumn([today, mood])),
+                    const SizedBox(width: _gap),
+                    Expanded(flex: 40, child: _FillColumn([momentum])),
+                    const SizedBox(width: _gap),
+                    const Expanded(flex: 30, child: _FillColumn([focus, tasks])),
+                  ],
+                ),
               ),
-            2 => Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: Column(children: [today, momentum, mood])),
-                  const SizedBox(width: 12),
-                  const Expanded(child: Column(children: [focus, tasks])),
-                ],
+            2 => IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: _FillColumn([today, momentum, mood])),
+                    const SizedBox(width: _gap),
+                    const Expanded(child: _FillColumn([focus, tasks])),
+                  ],
+                ),
               ),
-            _ => Column(children: [today, momentum, focus, tasks, mood]),
+            _ => Column(children: _spaced([today, momentum, focus, tasks, mood])),
           },
         ],
       );
     });
+  }
+}
+
+List<Widget> _spaced(List<Widget> cards) => [
+      for (var i = 0; i < cards.length; i++) ...[
+        if (i > 0) const SizedBox(height: DashboardScreen._gap),
+        cards[i],
+      ],
+    ];
+
+/// Kartları 16px aralıkla dizer; son kart sütunun kalan yüksekliğini doldurur.
+class _FillColumn extends StatelessWidget {
+  final List<Widget> cards;
+  const _FillColumn(this.cards);
+
+  @override
+  Widget build(BuildContext context) {
+    final spaced = _spaced(cards);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [...spaced.take(spaced.length - 1), Expanded(child: spaced.last)],
+    );
   }
 }
 
@@ -111,7 +135,7 @@ class _HeaderBar extends ConsumerWidget {
             children: [
               Text(
                 label[0].toUpperCase() + label.substring(1),
-                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               _HeaderStat(
                 value: '${progress.done}/${progress.total}',
@@ -176,7 +200,7 @@ class _HeaderStat extends StatelessWidget {
       children: [
         Text(value,
             style: kTabularNums.copyWith(
-                fontSize: 19, fontWeight: FontWeight.w700, color: color)),
+                fontSize: 18, fontWeight: FontWeight.w700, color: color)),
         const SizedBox(width: 5),
         Text(label, style: TextStyle(fontSize: 12, color: colors.textDim)),
       ],
@@ -215,7 +239,7 @@ class _TodayCard extends ConsumerWidget {
               if (rest.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text('Bugün planlı değil',
-                    style: TextStyle(fontSize: 11, color: colors.textDim)),
+                    style: TextStyle(fontSize: 12, color: colors.textDim)),
                 const SizedBox(height: 4),
                 for (final v in rest) _TodayRow(view: v, dimmed: true),
               ],
@@ -275,11 +299,11 @@ class _TodayRow extends ConsumerWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                                fontSize: 13.5, fontWeight: FontWeight.w600)),
+                                fontSize: 14, fontWeight: FontWeight.w600)),
                         if (isCount)
                           Text('$value / ${habit.target}',
                               style: kTabularNums.copyWith(
-                                  fontSize: 11, color: colors.textDim)),
+                                  fontSize: 12, color: colors.textDim)),
                       ],
                     ),
                   ),
@@ -290,7 +314,8 @@ class _TodayRow extends ConsumerWidget {
                             fontWeight: FontWeight.w700,
                             color: colors.done)),
                     const SizedBox(width: 2),
-                    Text('🔥', style: TextStyle(fontSize: 10)),
+                    Icon(Icons.local_fire_department_outlined,
+                        size: 14, color: colors.gold),
                     const SizedBox(width: 8),
                   ],
                   StatusMark(status: view.status, size: 30),
@@ -331,7 +356,7 @@ class _MomentumCard extends ConsumerWidget {
                       icon: Icons.grid_on_outlined, text: 'Son 30 gün'),
                 ),
                 Text('7g',
-                    style: TextStyle(fontSize: 10.5, color: colors.textDim)),
+                    style: TextStyle(fontSize: 12, color: colors.textDim)),
               ],
             ),
             const SizedBox(height: 12),
@@ -402,12 +427,22 @@ class _MomentumRow extends StatelessWidget {
       children: [
         Row(
           children: [
+            // Ad metin renginde (koyu alışkanlık renkleri 4.5:1'in altında
+            // kalıyordu); alışkanlığın rengi yanındaki noktada.
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
             Expanded(
               child: Text(habit.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: colors.text)),
             ),
             const SizedBox(width: 8),
             Text('%$pct',
@@ -487,7 +522,7 @@ class _MoodCard extends ConsumerWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: colors.textDim)),
             ],
@@ -553,7 +588,10 @@ class _CardTitle extends StatelessWidget {
           child: Text(text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontWeight: FontWeight.w700, color: colors.text)),
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: colors.textDim)),
         ),
       ],
     );

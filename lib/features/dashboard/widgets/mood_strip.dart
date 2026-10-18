@@ -151,15 +151,15 @@ class MoodPicker extends StatelessWidget {
                   color: mood == selected
                       ? colors.surfaceAlt
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     onTap: () => onTap(mood),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 140),
                       height: height,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: mood == selected
                               ? colors.done
@@ -172,8 +172,11 @@ class MoodPicker extends StatelessWidget {
                           duration: const Duration(milliseconds: 160),
                           curve: Curves.easeOutBack,
                           scale: mood == selected ? 1.2 : 1,
-                          child: Text(mood.emoji,
-                              style: const TextStyle(fontSize: 19)),
+                          child: Icon(mood.icon,
+                              size: 22,
+                              color: mood == selected
+                                  ? colors.text
+                                  : colors.textDim),
                         ),
                       ),
                     ),

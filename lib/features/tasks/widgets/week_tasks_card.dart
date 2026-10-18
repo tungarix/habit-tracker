@@ -34,11 +34,13 @@ class WeekTasksCard extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Text('Bu hafta',
                     style: TextStyle(
-                        fontWeight: FontWeight.w700, color: colors.text)),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: colors.textDim)),
                 const Spacer(),
                 if (summary.doneToday > 0)
                   Text('bugün ${summary.doneToday} bitti',
-                      style: TextStyle(fontSize: 11, color: colors.textDim)),
+                      style: TextStyle(fontSize: 12, color: colors.textDim)),
                 IconButton(
                   tooltip: 'Tüm görevler',
                   visualDensity: VisualDensity.compact,
@@ -72,7 +74,7 @@ class WeekTasksCard extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 6, top: 4),
                 child: Text('+${tasks.length - _maxShown} daha',
-                    style: TextStyle(fontSize: 11, color: colors.textDim)),
+                    style: TextStyle(fontSize: 12, color: colors.textDim)),
               ),
             const SizedBox(height: 6),
             const _QuickAdd(),
@@ -129,20 +131,20 @@ class _QuickAddState extends ConsumerState<_QuickAdd> {
       focusNode: _focus,
       textInputAction: TextInputAction.done,
       onSubmitted: (_) => _submit(),
-      style: const TextStyle(fontSize: 13),
+      style: const TextStyle(fontSize: 14),
       decoration: InputDecoration(
         isDense: true,
         hintText: 'Bugüne görev ekle…',
-        hintStyle: TextStyle(fontSize: 12.5, color: colors.textDim),
+        hintStyle: TextStyle(fontSize: 12, color: colors.textDim),
         prefixIcon: Icon(Icons.add, size: 18, color: colors.textDim),
         prefixIconConstraints:
             const BoxConstraints(minWidth: 30, minHeight: 30),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: colors.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: colors.border),
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 10),

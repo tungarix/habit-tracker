@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Small "🔥 N" pill showing the current streak. Hidden when streak is 0.
+/// Small flame + N pill showing the current streak. Hidden when streak is 0.
 class StreakBadge extends StatelessWidget {
   final int streak;
   const StreakBadge({super.key, required this.streak});
@@ -18,7 +18,8 @@ class StreakBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🔥', style: TextStyle(fontSize: 12)),
+          Icon(Icons.local_fire_department_outlined,
+              size: 14, color: scheme.onTertiaryContainer),
           const SizedBox(width: 4),
           Text(
             '$streak',

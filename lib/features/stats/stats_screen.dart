@@ -448,7 +448,7 @@ class _MoodCorrelationCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(mood.emoji, style: const TextStyle(fontSize: 16)),
+        Icon(mood.icon, size: 18, color: colors.textDim),
         const SizedBox(height: 2),
         Text(
           count > 0 ? '$count gün' : '',

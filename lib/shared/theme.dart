@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/enums.dart';
+
 /// App palette as a [ThemeExtension] so every widget can resolve the right
 /// colours for the active brightness via `AppColors.of(context)`.
 ///
@@ -168,6 +170,12 @@ class AppTheme {
         centerTitle: false,
         foregroundColor: c.text,
       ),
+      // Kart 16, kart içindeki her düğme 8: iki yarıçap.
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
       dialogTheme: DialogThemeData(backgroundColor: c.surface),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: c.surfaceAlt,
@@ -180,4 +188,15 @@ class AppTheme {
       ),
     );
   }
+}
+
+/// Ruh hali için çizgisel ikon (emoji her işletim sisteminde farklı çiziliyordu).
+extension MoodIcon on Mood {
+  IconData get icon => switch (this) {
+        Mood.yorgun => Icons.bedtime_outlined,
+        Mood.stresli => Icons.sentiment_very_dissatisfied_outlined,
+        Mood.uzgun => Icons.sentiment_dissatisfied_outlined,
+        Mood.memnun => Icons.sentiment_satisfied_outlined,
+        Mood.mutlu => Icons.sentiment_very_satisfied_outlined,
+      };
 }
