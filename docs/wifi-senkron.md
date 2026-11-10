@@ -1,6 +1,6 @@
 # Faz 4 tasarımı: QR + Wi-Fi senkron ve masaüstü uygulama içi güncelleme
 
-> **Durum: yalnız tasarım.** Hiçbir kod yazılmadı, hiçbir şey çalıştırılmadı. Bu belge şunlara
+> **Durum: tasarım; masaüstü tarafı v1.4.0 için uygulandı** (`lib/core/wifi_sync/`, `lib/features/eslestir/`), yayımlanmadı. Aşağıdaki "doğrulanmadı" notları tasarım anındandır. Bu belge şunlara
 > dayanır: mobil `PLAN.md`, `SABAH-OZET.md`, `tool/spike_tls/` (ve `docs/gece-raporu/04b-tls-spike.md`),
 > mobil `lib/platform/guncelleme/*`, masaüstü v5 çalışma kopyası (`docs/senkron.md`, `lib/data/sync/*`,
 > `.github/workflows/release.yml`, `windows/`), Takvim'in `docs/senkron-wifi.md` protokolü. Dosyalar

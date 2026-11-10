@@ -1,7 +1,7 @@
 # Habit Tracker senkron dosyası (`.habitsync`): biçim ve birleştirme kuralları
 
-> **Durum: taslak, yayımlanmadı.** Bu belge masaüstü 1.4.0 adayı için yazıldı; sürüm
-> henüz çıkmadı. Mobil uygulama (`habit-tracker-mobil`) aynı kuralları kopyalar; kurallar
+> **Durum: v1.4.0 için yazıldı** (sürüm hazırlanıyor; etiket ve yayın henüz yok).
+> Mobil uygulama (`habit-tracker-mobil`) aynı kuralları kopyalar; kurallar
 > **yalnız burada** yazılır, iki taraf bu belgeye uyar.
 
 Masaüstü ve mobil bu belgedeki tek biçimi konuşur. Ağ, hesap ve sunucu yok: kullanıcı

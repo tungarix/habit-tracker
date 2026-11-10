@@ -6,6 +6,7 @@ import 'package:aktenak_habit_tracker/data/update/akis.dart';
 import 'package:aktenak_habit_tracker/data/update/ayarlar.dart';
 import 'package:aktenak_habit_tracker/data/update/guncelleyici.dart';
 import 'package:aktenak_habit_tracker/features/update/guncelleme_bolumu.dart';
+import 'package:aktenak_habit_tracker/surum.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,7 +78,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Hiç sorulmadı: ağ isteği yok, teklif yok.
-    expect(find.text('Sürüm 1.3.3'), findsOneWidget);
+    expect(find.text('Sürüm $uygulamaSurumu'), findsOneWidget);
     expect(find.text('Henüz denetlenmedi.'), findsOneWidget);
     expect(find.textContaining('Yeni sürüm 9.9.9'), findsNothing);
     expect(gh.istekler, isEmpty);

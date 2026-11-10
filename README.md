@@ -61,12 +61,23 @@ sekmesini kullanabilirsin.
 - **Yedek**: tüm veri tek `.json` dosyası (format v5: alışkanlıklar + işaretlemeler +
   mood + görevler + seanslar + senkron kimlikleri). v1–v4 yedekler içe aktarılabilir. **Birleştir** veya
   **Tamamen değiştir** seçenekleri.
-- **Telefonla senkron (taslak, yayımlanmadı)**: Ayarlar'da iki düğme, **Telefon için dışa
-  aktar** ve **Telefondan içe aktar**. Veri tek bir `.habitsync` dosyasıyla gidip gelir;
-  aynı kayıtta son değişiklik kazanır, silmeler de taşınır, aynı dosyayı iki kez içe
-  aktarmak hiçbir şeyi değiştirmez. Bu özellik **henüz bir sürümde yok** (1.4.0 adayı
-  olarak hazırlanıyor, yayımlanmadı); karşı taraf mobil uygulamadır. Biçim ve kurallar:
-  [docs/senkron.md](docs/senkron.md).
+- **Telefonla senkron** (v1.4.0): iki yol, ikisi de aynı birleştirme kurallarını kullanır.
+  - **Wi-Fi + QR**: Ayarlar'da **Telefonla eşleştir (Wi-Fi)** geçici, şifreli (HTTPS) bir
+    sunucu açar ve bir QR gösterir; telefonda "QR'ı tara" ile eşleşilir. Kod tek
+    kullanımlıktır, 3 dakika geçerlidir, yalnız özel ağ adreslerine açılır; telefon
+    bağlanınca ve veri gelince masaüstünde iki onay istenir. Bulut, hesap, kalıcı sunucu
+    yoktur; işlem bitince ya da iptalde sunucu kapanır. Birleştirmeden önce yerel yedek alınır.
+    Ayrıntı: [docs/wifi-senkron.md](docs/wifi-senkron.md).
+  - **Dosya**: **Telefon için dışa aktar** / **Telefondan içe aktar** tek bir `.habitsync`
+    dosyası taşır (Paylaş, USB, Drive). Aynı kayıtta son değişiklik kazanır, silmeler de
+    taşınır, aynı dosyayı iki kez içe aktarmak hiçbir şeyi değiştirmez. Biçim ve kurallar:
+    [docs/senkron.md](docs/senkron.md).
+  - Karşı taraf mobil uygulamadır (Android; kamera izni orada yalnız "QR'ı tara"ya basınca
+    istenir).
+- **Uygulama içi güncelleme** (v1.4.0): Ayarlar'da **Güncelleme** bölümü GitHub'daki en son
+  sürümü sorar, zip'i indirir, SHA-256'yı denetler ve `SHA256SUMS.txt` dosyasının **Ed25519
+  imzasını** doğrular; imzasız ya da bozuk imzalı sürüm kurulmaz. Kurulum kullanıcı onayıyla
+  olur, veri klasörüne dokunulmaz. Ayrıntı: [docs/guncelleme-imzasi.md](docs/guncelleme-imzasi.md).
 - **Otomatik yedek**: her gün bir kez veri klasöründeki `yedekler/` altına tam JSON yedek
   alınır, son 14 gün saklanır (elle aldığın yedeklere dokunulmaz). Ayarlar'da veri
   klasörünün yolu görünür, **Klasörü aç** / **Yedekleri aç** ile açılır.
@@ -122,7 +133,7 @@ edilir. Gerekçe gerçek bir arıza: uygulama yükseltme sırasında kapanınca 
 ama sürüm numarası geri alındı; sonraki her açılış `duplicate column name` ile patladı ve
 veritabanı kalıcı olarak kilitlendi. `test/migration_test.dart` bu senaryoyu tutuyor.
 
-Şema v5 (taslak, yayımlanmadı) senkron için `uid`, `updated_at` ve silinenler tablosunu
+Şema v5 (v1.4.0) senkron için `uid`, `updated_at` ve silinenler tablosunu
 ekler; tetikleyiciler `lib/data/database/sync_schema.dart` içindedir. Taze kurulum ile
 yükseltilmiş kurulum aynı şemayı vermelidir: `test/migration_v5_test.dart` karşılaştırır.
 
