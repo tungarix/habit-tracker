@@ -261,8 +261,23 @@ class EslestirmeSunucusu {
     await res.close();
   }
 
-  Future<void> _hataYaz(HttpRequest r, WifiHata h) =>
-      _yaz(r, h.http, {'error': h.kod});
+  final _okundu = Expando<bool>();
+
+  Future<void> _hataYaz(HttpRequest r, WifiHata h) async {
+    final govdeVar = r.contentLength > 0 || r.headers.chunkedTransferEncoding;
+    if (!govdeVar || _okundu[r] == true) return _yaz(r, h.http, {'error': h.kod});
+    // Okunmamış gövde var (aşırı büyük/yarım): Dart yanıtı gövde bitene kadar
+    // tutar. Bağlantıyı devralıp yanıtı elle yazar ve kapatırız; gövde okunmaz.
+    final s = await r.response.detachSocket(writeHeaders: false);
+    final b = utf8.encode(jsonEncode({'error': h.kod}));
+    s.add(ascii.encode('HTTP/1.1 ${h.http} Hata\r\n'
+        'Content-Type: application/json; charset=utf-8\r\n'
+        'Cache-Control: no-store\r\nConnection: close\r\n'
+        'Content-Length: ${b.length}\r\n\r\n'));
+    s.add(b);
+    await s.flush();
+    s.destroy();
+  }
 
   /// 'jeton' | 'oturum' | null
   String? _kimlik(HttpRequest r, String ip) {
@@ -355,6 +370,7 @@ class EslestirmeSunucusu {
 
   /// Gövdeyi toplam [EslestirmeAyar.govdeOkuma] içinde okur; olmazsa null.
   Future<Uint8List?> _oku(HttpRequest r) async {
+    _okundu[r] = true;
     final tampon = BytesBuilder(copy: false);
     final bitti = Completer<bool>();
     final zaman = Timer(ayar.govdeOkuma, () {
@@ -369,7 +385,8 @@ class EslestirmeSunucusu {
     final tamam = await bitti.future;
     zaman.cancel();
     if (!tamam) {
-      await abone.cancel();
+      _okundu[r] = false; // yarım kaldı: yanıt elle yazılır, bağlantı kapanır
+      abone.pause(); // cancel() bağlantıyı yok eder; yanıt elle yazılacak
       return null;
     }
     return tampon.takeBytes();

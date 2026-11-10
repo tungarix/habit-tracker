@@ -81,11 +81,11 @@ void main() {
     });
 
     test('ad: bidi/kontrol karakterleri atılır, 40 karaktere kesilir', () {
-      final temiz = adTemizle('A‮B\u0007C⁦D' * 20);
+      final temiz = adTemizle('A\u202eB\u0007C\u2066D' * 20);
       expect(temiz.length, lessThanOrEqualTo(40));
-      expect(temiz, isNot(contains('‮')));
+      expect(temiz, isNot(contains('\u202e')));
       expect(temiz, isNot(contains('\u0007')));
-      expect(temiz, isNot(contains('⁦')));
+      expect(temiz, isNot(contains('\u2066')));
     });
   });
 
