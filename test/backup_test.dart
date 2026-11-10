@@ -4,6 +4,7 @@ import 'package:aktenak_habit_tracker/core/constants.dart';
 import 'package:aktenak_habit_tracker/core/enums.dart';
 import 'package:aktenak_habit_tracker/data/database/database.dart';
 import 'package:aktenak_habit_tracker/data/repositories/backup_repository.dart';
+import 'package:aktenak_habit_tracker/data/sync/sync_format.dart' show syncMaxRecords;
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -509,6 +510,46 @@ void main() {
 
       expect(result.sessions, 4);
       expect(await db.getAllSessions(), hasLength(5));
+    });
+  });
+
+  group('bozuk ya da sınır dışı yedek', () {
+    // Each must throw a readable FormatException and leave the data alone, in both modes.
+    Future<void> reddedilir(String json, Matcher mesaj) async {
+      for (final replace in [false, true]) {
+        final db = _memoryDb();
+        await _addHabit(db, 'Mevcut', _t1);
+        final before = await _counts(db);
+        await expectLater(
+          BackupRepository(db).importJson(json, replace: replace),
+          throwsA(isA<FormatException>().having((e) => e.message, 'message', mesaj)),
+        );
+        expect(await _counts(db), before, reason: 'replace=$replace');
+      }
+    }
+
+    test('yanlış alan türü TypeError değil okunur hata verir', () async {
+      final h = _fileHabit(1, 'Spor', _t2)..['colorValue'] = 'kırmızı';
+      await reddedilir(_file(habits: [h]), contains('beklenen türde değil'));
+      final id = _fileHabit(1, 'Spor', _t2)..['id'] = 'bir';
+      await reddedilir(_file(habits: [id]), contains('beklenen türde değil'));
+      await reddedilir(
+        jsonEncode({'format': AppConstants.backupFormat, 'version': 5, 'habits': [1, 2]}),
+        contains('beklenen türde değil'),
+      );
+    });
+
+    test('çok iç içe JSON ve bozuk JSON', () async {
+      await reddedilir('[' * 5000, contains('iç içe'));
+      await reddedilir('{', contains('JSON'));
+    });
+
+    test('uzun ad ve çok kayıt', () async {
+      await reddedilir(_file(habits: [_fileHabit(1, 'x' * 101, _t2)]), contains('alışkanlık adı'));
+      await reddedilir(
+        _file(entries: List.filled(syncMaxRecords + 1, <String, dynamic>{})),
+        contains('en çok'),
+      );
     });
   });
 }

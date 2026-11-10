@@ -5,6 +5,8 @@ import 'package:drift/drift.dart';
 import '../../core/constants.dart';
 import '../../core/enums.dart';
 import '../database/database.dart';
+import '../sync/sync_format.dart';
+import '../sync/sync_parse.dart' show jsonDepth;
 
 /// Outcome of an import, for showing a confirmation to the user.
 class ImportResult {
@@ -164,7 +166,29 @@ class BackupRepository {
   /// * A focus session that is already stored (same kind, start, duration and
   ///   day) is not added again.
   Future<ImportResult> importJson(String jsonStr, {required bool replace}) async {
-    final dynamic decoded = jsonDecode(jsonStr);
+    // Same nesting limit as .habitsync, checked before decoding: a deeply
+    // nested file could overflow the decoder's stack.
+    if (jsonDepth(jsonStr) > syncMaxJsonDepth) {
+      throw const FormatException('Geçersiz yedek dosyası (çok iç içe).');
+    }
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(jsonStr);
+    } on FormatException {
+      throw const FormatException('Geçersiz yedek dosyası (JSON okunamadı).');
+    }
+    try {
+      return await _importDecoded(decoded, replace: replace);
+    } on TypeError {
+      // A field with the wrong type (`as int` on a string...). The transaction
+      // rolled back, so nothing changed.
+      throw const FormatException(
+        'Yedek dosyası bozuk: bir alan beklenen türde değil. Hiçbir şey değişmedi.',
+      );
+    }
+  }
+
+  Future<ImportResult> _importDecoded(dynamic decoded, {required bool replace}) async {
     if (decoded is! Map<String, dynamic>) {
       throw const FormatException('Geçersiz yedek dosyası.');
     }
@@ -186,6 +210,26 @@ class BackupRepository {
         (decoded['sessions'] as List? ?? const []).cast<Map<String, dynamic>>();
     final deletedMaps =
         (decoded['deleted'] as List? ?? const []).cast<Map<String, dynamic>>();
+
+    final records = habitMaps.length +
+        entryMaps.length +
+        moodMaps.length +
+        taskMaps.length +
+        sessionMaps.length +
+        deletedMaps.length;
+    if (records > syncMaxRecords) {
+      throw FormatException('Yedekte en çok $syncMaxRecords kayıt olabilir (var: $records).');
+    }
+    for (final h in habitMaps) {
+      _checkText(h['name'], 1, syncMaxHabitName, 'alışkanlık adı');
+      _checkText(h['description'], 0, syncMaxTextLength, 'açıklama');
+    }
+    for (final t in taskMaps) {
+      _checkText(t['title'], 1, syncMaxTaskTitle, 'görev başlığı');
+    }
+    for (final m in moodMaps) {
+      _checkText(m['note'], 0, syncMaxTextLength, 'not');
+    }
 
     var importedEntries = 0;
     var importedSessions = 0;
@@ -583,4 +627,13 @@ class _KnownRow {
   final DateTime createdAt;
   String? uid;
   _KnownRow(this.id, this.label, this.createdAt, [this.uid]);
+}
+
+/// Backup text fields: null is fine, anything else must be a string of the allowed length
+/// (the tables would reject a longer name with a raw SQLite error).
+void _checkText(Object? v, int min, int max, String what) {
+  if (v == null && min == 0) return;
+  if (v is! String || v.length < min || v.length > max) {
+    throw FormatException('Yedek dosyası bozuk: $what $min..$max karakter olmalı. Hiçbir şey değişmedi.');
+  }
 }

@@ -86,7 +86,7 @@ SyncException _bad(String detail) =>
 
 /// Nesting depth of the JSON text without decoding it (so a hostile file
 /// cannot blow the stack in the decoder). Strings and escapes are skipped.
-int _jsonDepth(String text) {
+int jsonDepth(String text) {
   var depth = 0, max = 0;
   var inString = false, escape = false;
   for (var i = 0; i < text.length; i++) {
@@ -116,7 +116,8 @@ int _jsonDepth(String text) {
 
 /// Decodes and validates [bytes]. Throws [SyncException] (or its subclass
 /// [SyncVersionException]) for anything wrong; returns nothing half-done.
-SyncFile parseSync(Uint8List bytes) {
+SyncFile parseSync(Uint8List bytes, {DateTime? now}) {
+  final latest = (now ?? DateTime.now()).millisecondsSinceEpoch ~/ 1000 + syncMaxFutureSecs;
   if (bytes.length > syncMaxFileBytes) {
     throw _bad('dosya çok büyük (en çok ${syncMaxFileBytes ~/ (1024 * 1024)} MB)');
   }
@@ -127,7 +128,7 @@ SyncFile parseSync(Uint8List bytes) {
     throw _bad('UTF-8 metin değil');
   }
   final body = text.startsWith('﻿') ? text.substring(1) : text;
-  if (_jsonDepth(body) > syncMaxJsonDepth) {
+  if (jsonDepth(body) > syncMaxJsonDepth) {
     throw _bad('JSON en çok $syncMaxJsonDepth düzey iç içe olabilir');
   }
   final Object? decoded;
@@ -167,6 +168,12 @@ SyncFile parseSync(Uint8List bytes) {
       tasks.length +
       sessions.length +
       deleted.length;
+  if (habits.length > syncMaxHabits) {
+    throw _bad('en çok $syncMaxHabits alışkanlık olabilir (var: ${habits.length})');
+  }
+  if (tasks.length > syncMaxTasks) {
+    throw _bad('en çok $syncMaxTasks görev olabilir (var: ${tasks.length})');
+  }
   if (total > syncMaxRecords) {
     throw _bad('en çok $syncMaxRecords kayıt olabilir (var: $total)');
   }
@@ -181,7 +188,7 @@ SyncFile parseSync(Uint8List bytes) {
       if (d is! Map<String, dynamic>) throw _bad('day_start_hour bir nesne olmalı');
       file.dayStartHour = SSetting(
         _int(d, 'value', min: 0, max: 12, where: 'day_start_hour'),
-        _time(d, 'updated_at', where: 'day_start_hour')!,
+        _time(d, 'updated_at', where: 'day_start_hour', latest: latest)!,
       );
     }
   }
@@ -212,7 +219,7 @@ SyncFile parseSync(Uint8List bytes) {
       _time(m, 'archived_at', where: 'habit $uid', nullable: true),
       _int(m, 'sort_order', min: -1000000, max: 1000000, where: 'habit $uid'),
       weekdays,
-      _time(m, 'updated_at', where: 'habit $uid')!,
+      _time(m, 'updated_at', where: 'habit $uid', latest: latest)!,
     ));
   }
 
@@ -226,7 +233,7 @@ SyncFile parseSync(Uint8List bytes) {
       _str(m, 'status', where: 'entry $habitUid|$date', oneOf: _entryStatuses),
       _int(m, 'value', min: 0, max: 1000000000, where: 'entry $habitUid|$date'),
       _time(m, 'created_at', where: 'entry $habitUid|$date')!,
-      _time(m, 'updated_at', where: 'entry $habitUid|$date')!,
+      _time(m, 'updated_at', where: 'entry $habitUid|$date', latest: latest)!,
     ));
   }
 
@@ -238,7 +245,7 @@ SyncFile parseSync(Uint8List bytes) {
       _int(m, 'mood', min: 1, max: 5, where: 'mood $date'),
       _strOrNull(m, 'note', where: 'mood $date', max: syncMaxTextLength),
       _time(m, 'created_at', where: 'mood $date')!,
-      _time(m, 'updated_at', where: 'mood $date')!,
+      _time(m, 'updated_at', where: 'mood $date', latest: latest)!,
     ));
   }
 
@@ -253,7 +260,7 @@ SyncFile parseSync(Uint8List bytes) {
       m['due_day'] == null ? null : _day(m, 'due_day', where: 'task $uid'),
       _time(m, 'created_at', where: 'task $uid')!,
       _time(m, 'completed_at', where: 'task $uid', nullable: true),
-      _time(m, 'updated_at', where: 'task $uid')!,
+      _time(m, 'updated_at', where: 'task $uid', latest: latest)!,
     ));
   }
 
@@ -274,7 +281,7 @@ SyncFile parseSync(Uint8List bytes) {
           : _int(m, 'duration_s', min: 0, max: 7 * 86400, where: 'session $uid'),
       _day(m, 'day', where: 'session $uid'),
       taskUid as String?,
-      _time(m, 'updated_at', where: 'session $uid')!,
+      _time(m, 'updated_at', where: 'session $uid', latest: latest)!,
     ));
   }
 
@@ -288,7 +295,7 @@ SyncFile parseSync(Uint8List bytes) {
     };
     if (!okKey) throw _bad('deleted: "$kind" için anahtar geçersiz ($key)');
     unique('deleted', '$kind|$key');
-    file.deleted.add(STomb(kind, key, _time(m, 'deleted_at', where: 'deleted $key')!));
+    file.deleted.add(STomb(kind, key, _time(m, 'deleted_at', where: 'deleted $key', latest: latest)!));
   }
   return file;
 }
@@ -348,7 +355,7 @@ String _day(Map<String, dynamic> m, String key, {required String where}) {
 
 /// Fixed-width UTC time -> unix seconds, at least 1 (0 means "unstamped").
 int? _time(Map<String, dynamic> m, String key,
-    {required String where, bool nullable = false}) {
+    {required String where, bool nullable = false, int? latest}) {
   final v = m[key];
   if (v == null && nullable) return null;
   if (v is! String || !_timeRe.hasMatch(v)) {
@@ -361,5 +368,8 @@ int? _time(Map<String, dynamic> m, String key,
   }
   final secs = d.millisecondsSinceEpoch ~/ 1000;
   if (d.year < 1970 || d.year > 9999) throw _bad('$where: "$key" aralık dışı ($v)');
+  if (latest != null && secs > latest) {
+    throw _bad('$where: "$key" gelecekte ($v); cihazın saatini denetle');
+  }
   return secs < 1 ? 1 : secs;
 }

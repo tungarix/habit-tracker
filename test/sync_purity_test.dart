@@ -40,5 +40,8 @@ void main() {
     expect(fromDoc('syncMaxTextLength'), syncMaxTextLength);
     expect(fromDoc('syncMaxHabitName'), syncMaxHabitName);
     expect(fromDoc('syncMaxTaskTitle'), syncMaxTaskTitle);
+    expect(fromDoc('syncMaxHabits'), syncMaxHabits);
+    expect(fromDoc('syncMaxTasks'), syncMaxTasks);
+    expect(fromDoc('syncMaxFutureSecs'), syncMaxFutureSecs);
   });
 }

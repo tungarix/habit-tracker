@@ -7,6 +7,7 @@ import 'package:aktenak_habit_tracker/data/repositories/backup_repository.dart';
 import 'package:aktenak_habit_tracker/data/sync/sync_export.dart';
 import 'package:aktenak_habit_tracker/data/sync/sync_format.dart';
 import 'package:aktenak_habit_tracker/data/sync/sync_import.dart';
+import 'package:aktenak_habit_tracker/data/sync/sync_parse.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -165,6 +166,49 @@ void main() {
       await expectRejected(jsonEncode(longNote));
       (longNote['moods'] as List)[0]['note'] = 'n' * syncMaxTextLength;
       expect((await importSyncText(m.db, jsonEncode(longNote))).added, greaterThan(0));
+    });
+
+    test('gelecek tarihli updated_at / deleted_at reddedilir, veri değişmez', () async {
+      await seed(m, base: 500);
+      final base = jsonDecode(await good()) as Map<String, dynamic>;
+      Future<void> future(void Function(Map<String, dynamic>) edit) async {
+        final copy = jsonDecode(jsonEncode(base)) as Map<String, dynamic>;
+        edit(copy);
+        await expectRejected(jsonEncode(copy), message: contains('gelecekte'));
+      }
+
+      const far = '2099-01-01T00:00:00Z';
+      await future((j) => (j['habits'] as List)[0]['updated_at'] = far);
+      await future((j) => (j['entries'] as List)[0]['updated_at'] = far);
+      await future((j) => (j['moods'] as List)[0]['updated_at'] = far);
+      await future((j) => (j['tasks'] as List)[0]['updated_at'] = far);
+      await future((j) => (j['sessions'] as List)[0]['updated_at'] = far);
+      await future((j) => j['settings'] = {'day_start_hour': {'value': 3, 'updated_at': far}});
+      await future((j) => j['deleted'] = [
+            {'kind': 'habit', 'key': 'abc', 'deleted_at': far},
+          ]);
+    });
+
+    test('gelecek sınırı: şimdi + 1 gün kabul, bir saniye fazlası red', () async {
+      final doc = jsonDecode(await good()) as Map<String, dynamic>;
+      // The exported stamps are real "now" ones, so pin the clock to the present.
+      final secs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final now = DateTime.fromMillisecondsSinceEpoch(secs * 1000, isUtc: true);
+      (doc['habits'] as List)[0]['updated_at'] = syncTime(secs + syncMaxFutureSecs);
+      final ok = Uint8List.fromList(utf8.encode(jsonEncode(doc)));
+      expect(() => parseSync(ok, now: now), returnsNormally);
+      (doc['habits'] as List)[0]['updated_at'] = syncTime(secs + syncMaxFutureSecs + 1);
+      final bad = Uint8List.fromList(utf8.encode(jsonEncode(doc)));
+      expect(() => parseSync(bad, now: now), throwsA(isA<SyncException>()));
+    });
+
+    test('tür başına sınır: alışkanlık ve görev', () async {
+      String many(String key, int n) =>
+          '{"format":"habit-sync","version":1,"$key":[${List.filled(n, '{}').join(',')}]}';
+      await expectRejected(many('habits', syncMaxHabits + 1), message: contains('en çok $syncMaxHabits alışkanlık'));
+      await expectRejected(many('tasks', syncMaxTasks + 1), message: contains('en çok $syncMaxTasks görev'));
+      // At the cap the count check passes (the empty records then fail on content).
+      await expectRejected(many('habits', syncMaxHabits), message: isNot(contains('alışkanlık olabilir')));
     });
 
     test('BOM ve bilinmeyen alanlar kabul edilir (ileri uyum)', () async {

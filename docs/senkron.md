@@ -73,6 +73,9 @@ adları kodla aynıdır (`lib/data/sync/sync_format.dart`); bir test bu tabloyu 
 |---|---|---|
 | `syncMaxFileBytes` | 16777216 | Dosya boyutu, bayt (16 MiB). Çözmeden önce denetlenir. |
 | `syncMaxRecords` | 250000 | Dosyadaki toplam kayıt: alışkanlık + hücre + mood + görev + seans + silinen. |
+| `syncMaxHabits` | 10000 | Dosyadaki alışkanlık sayısı. Eşleştirme ikinci dereceden olduğu için tür başına sınır şart. |
+| `syncMaxTasks` | 10000 | Dosyadaki görev sayısı. Aynı gerekçe. |
+| `syncMaxFutureSecs` | 86400 | `updated_at` / `deleted_at` içe aktaran cihazın saatinden en çok bu kadar ileride olabilir (1 gün). Daha ilerisi LWW'yi kalıcı zehirler. |
 | `syncMaxJsonDepth` | 8 | En çok iç içe `[`/`{` düzeyi. Gerçek dosya 3 düzeydir. Metin çözülmeden sayılır. |
 | `syncMaxTextLength` | 10000 | Serbest metin (açıklama, not) uzunluğu, UTF-16 birimi. |
 | `syncMaxHabitName` | 100 | Alışkanlık adı. Tablo kısıtıyla aynı. |
@@ -88,7 +91,7 @@ Dosya, veritabanına dokunulmadan önce baştan sona denetlenir; **tek kayıt bo
 tamamı reddedilir**. Denetimler: biçim ve sürüm; sınırlar (§2); her türde yinelenen anahtar
 (aynı `uid`, aynı `habit_uid|date`, aynı mood günü, aynı silinen); zorunlu alanlar ve türleri;
 enum değerleri; gerçek takvim günü (`2026-02-31` reddedilir); zaman biçimi; `scheduled_weekdays`
-için `1,3,5` biçimi; uzunluklar. Reddedilen dosya ya da içe aktarma sırasındaki herhangi bir
+için `1,3,5` biçimi; uzunluklar; `updated_at` ve `deleted_at` değerlerinin gelecekte olmaması (`syncMaxFutureSecs`). Gelecek damgalı dosya kırpılmaz, reddedilir: kırpılırsa aynı dosyayı iki kez içe aktarmak değişiklik yapardı. Reddedilen dosya ya da içe aktarma sırasındaki herhangi bir
 hata **hiçbir şeyi değiştirmez**: birleştirme tek transaction'da çalışır.
 
 ## 4. Birleştirme (içe aktarma)

@@ -24,6 +24,16 @@ const int syncMaxFileBytes = 16 * 1024 * 1024;
 /// deleted. About ten years of 60 habits fit with room to spare.
 const int syncMaxRecords = 250000;
 
+/// Most habits and most tasks in one file. Matching unmatched file rows against
+/// local rows is quadratic, so a per-kind cap keeps a hostile file cheap.
+const int syncMaxHabits = 10000;
+const int syncMaxTasks = 10000;
+
+/// `updated_at` / `deleted_at` may be at most this far ahead of the importing
+/// device's clock (one day of clock skew). A later stamp would win every
+/// last-writer-wins comparison from then on, so the whole file is rejected.
+const int syncMaxFutureSecs = 86400;
+
 /// Deepest JSON nesting accepted (a real file nests 3 deep).
 const int syncMaxJsonDepth = 8;
 
