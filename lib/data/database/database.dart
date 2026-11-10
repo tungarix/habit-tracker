@@ -7,12 +7,21 @@ import 'package:path/path.dart' as p;
 import '../../core/constants.dart';
 import '../../core/enums.dart';
 import '../data_location.dart';
+import 'sync_schema.dart';
 import 'tables.dart';
 
 part 'database.g.dart';
 
 @DriftDatabase(
-  tables: [Habits, HabitEntries, MoodEntries, Tasks, FocusSessions, Settings],
+  tables: [
+    Habits,
+    HabitEntries,
+    MoodEntries,
+    Tasks,
+    FocusSessions,
+    Settings,
+    Silinenler,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -21,7 +30,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   /// Whether [column] already exists on [table].
   ///
@@ -44,8 +53,61 @@ class AppDatabase extends _$AppDatabase {
     return rows.isNotEmpty;
   }
 
+  /// v4 -> v5: sync identity, change stamps and the delete log (see
+  /// docs/senkron.md). Every step checks before it acts, like the older ones.
+  Future<void> _migrateToV5(Migrator m) async {
+    if (!await _hasTable('silinenler')) await m.createTable(silinenler);
+
+    for (final entry in uidTables.entries) {
+      final table = entry.key;
+      if (!await _hasColumn(table, 'uid')) {
+        await customStatement('ALTER TABLE $table ADD COLUMN uid TEXT');
+      }
+      // Each row evaluates the expression separately, so every row gets its
+      // own uid. Must run before the unique index exists only for speed.
+      await customStatement(
+        'UPDATE $table SET uid = $sqlUuidV4 WHERE uid IS NULL',
+      );
+      await customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS ${table}_uid_idx ON $table (uid)',
+      );
+    }
+
+    for (final entry in updatedAtBackfill.entries) {
+      final table = entry.key;
+      if (!await _hasColumn(table, 'updated_at')) {
+        await customStatement(
+          'ALTER TABLE $table ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
+        );
+      }
+      await customStatement(
+        'UPDATE $table SET updated_at = ${entry.value} WHERE updated_at = 0',
+      );
+    }
+
+    // Triggers last: the backfills above must not be mistaken for user edits.
+    for (final sql in syncSchemaStatements()) {
+      await customStatement(sql);
+    }
+
+    // A day-start hour chosen before sync existed gets a stamp, or it would
+    // count as "older than anything" and be overwritten by the first file.
+    await customStatement(
+      "INSERT OR IGNORE INTO settings (key, value) "
+      "SELECT '${AppConstants.dayStartHourStampKey}', "
+      "CAST(strftime('%s', 'now') AS TEXT) FROM settings "
+      "WHERE key = '${AppConstants.dayStartHourKey}'",
+    );
+  }
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) async {
+          await m.createAll();
+          for (final sql in syncSchemaStatements()) {
+            await customStatement(sql);
+          }
+        },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             // v1 -> v2: habit category, tri-state entries, moods, settings.
@@ -63,7 +125,13 @@ class AppDatabase extends _$AppDatabase {
                   // Survivors all had done = 1 -> EntryStatus.done (index 0).
                   habitEntries.status: const CustomExpression<int>('0'),
                 },
-                newColumns: [habitEntries.status],
+                // value / updatedAt are newer than v1: without listing them the
+                // copy would select columns the v1 table does not have.
+                newColumns: [
+                  habitEntries.status,
+                  habitEntries.value,
+                  habitEntries.updatedAt,
+                ],
               ));
             }
             if (!await _hasTable('mood_entries')) {
@@ -95,6 +163,7 @@ class AppDatabase extends _$AppDatabase {
               await m.createTable(focusSessions);
             }
           }
+          if (from < 5) await _migrateToV5(m);
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');

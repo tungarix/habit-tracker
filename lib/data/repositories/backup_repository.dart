@@ -32,6 +32,12 @@ class ImportResult {
 /// Format v2 adds `category` on habits, tri-state `status` on entries
 /// ('done' | 'missed' | 'skipped') and a top-level `moods` list. v1 files
 /// (boolean `done` entries) can still be imported.
+///
+/// Format v5 adds the sync identity: `uid` + `updatedAt` on habits, tasks and
+/// sessions, `updatedAt` on entries and moods, `habitUid` on entries,
+/// `taskUid` on sessions, and a top-level `deleted` list (the delete log).
+/// v1-v4 files are read by the same first-match rule sync uses, see
+/// docs/senkron.md.
 class BackupRepository {
   final AppDatabase db;
   BackupRepository(this.db);
@@ -43,6 +49,9 @@ class BackupRepository {
     final moods = await db.getAllMoods();
     final taskRows = await db.getAllTasks();
     final sessionRows = await db.getAllSessions();
+    final tombstones = await db.select(db.silinenler).get();
+    final habitUid = {for (final h in habits) h.id: h.uid};
+    final taskUid = {for (final t in taskRows) t.id: t.uid};
 
     final map = <String, dynamic>{
       'format': AppConstants.backupFormat,
@@ -52,6 +61,8 @@ class BackupRepository {
         for (final h in habits)
           {
             'id': h.id,
+            'uid': h.uid,
+            'updatedAt': _isoSecs(h.updatedAt),
             'name': h.name,
             'description': h.description,
             'colorValue': h.colorValue,
@@ -69,6 +80,8 @@ class BackupRepository {
         for (final e in entries)
           {
             'habitId': e.habitId,
+            'habitUid': habitUid[e.habitId],
+            'updatedAt': _isoSecs(e.updatedAt),
             'date': e.date,
             'status': e.status.name,
             'value': e.value,
@@ -76,12 +89,19 @@ class BackupRepository {
       ],
       'moods': [
         for (final m in moods)
-          {'date': m.date, 'mood': m.mood, 'note': m.note},
+          {
+            'date': m.date,
+            'mood': m.mood,
+            'note': m.note,
+            'updatedAt': _isoSecs(m.updatedAt),
+          },
       ],
       'tasks': [
         for (final t in taskRows)
           {
             'id': t.id,
+            'uid': t.uid,
+            'updatedAt': _isoSecs(t.updatedAt),
             'title': t.title,
             'status': t.status,
             'priority': t.priority,
@@ -93,12 +113,23 @@ class BackupRepository {
       'sessions': [
         for (final s in sessionRows)
           {
+            'uid': s.uid,
+            'updatedAt': _isoSecs(s.updatedAt),
             'kind': s.kind,
             'startedAt': s.startedAt.toUtc().toIso8601String(),
             'endedAt': s.endedAt?.toUtc().toIso8601String(),
             'durationS': s.durationS,
             'day': s.day,
             'taskId': s.taskId,
+            'taskUid': taskUid[s.taskId],
+          },
+      ],
+      'deleted': [
+        for (final d in tombstones)
+          {
+            'kind': d.kind,
+            'key': d.anahtar,
+            'deletedAt': _isoSecs(d.deletedAt),
           },
       ],
     };
@@ -114,7 +145,7 @@ class BackupRepository {
     return 'aktenak-backup-$stamp.json';
   }
 
-  /// Imports a backup string (format v1 or v2).
+  /// Imports a backup string (format v1 to v5).
   ///
   /// When [replace] is true the existing data is wiped first and every row
   /// keeps the id it has in the file. Otherwise the import is merged:
@@ -140,6 +171,12 @@ class BackupRepository {
     if (decoded['format'] != AppConstants.backupFormat) {
       throw const FormatException('Tanınmayan yedek formatı.');
     }
+    final version = decoded['version'];
+    if (version is int && version > AppConstants.backupVersion) {
+      throw const FormatException(
+        'Bu yedek daha yeni bir sürümle alınmış. Uygulamayı güncelle.',
+      );
+    }
 
     final habitMaps = (decoded['habits'] as List? ?? const []).cast<Map<String, dynamic>>();
     final entryMaps = (decoded['entries'] as List? ?? const []).cast<Map<String, dynamic>>();
@@ -147,6 +184,8 @@ class BackupRepository {
     final taskMaps = (decoded['tasks'] as List? ?? const []).cast<Map<String, dynamic>>();
     final sessionMaps =
         (decoded['sessions'] as List? ?? const []).cast<Map<String, dynamic>>();
+    final deletedMaps =
+        (decoded['deleted'] as List? ?? const []).cast<Map<String, dynamic>>();
 
     var importedEntries = 0;
     var importedSessions = 0;
@@ -158,6 +197,9 @@ class BackupRepository {
         await db.delete(db.moodEntries).go();
         await db.delete(db.habitEntries).go();
         await db.delete(db.habits).go();
+        // The delete log is deliberately left alone: whatever the backup does
+        // not bring back stays deleted for sync too, and rows it does bring
+        // back clear their own tombstone when they are inserted.
       }
 
       // File id -> id the row has in this database. In replace mode that is
@@ -165,24 +207,33 @@ class BackupRepository {
       // whose id is taken by something else gets a new one.
       final habitIds = <int, int>{};
       final taskIds = <int, int>{};
+      // File uid -> local id, for rows the file names by uid (v5).
+      final habitIdByUid = <String, int>{};
+      final taskIdByUid = <String, int>{};
+      final seenUids = <String>{}; // a uid used twice in the file is dropped
 
       final knownHabits = replace
           ? <_KnownRow>[]
           : [
               for (final h in await db.getAllHabits())
-                _KnownRow(h.id, h.name, h.createdAt),
+                _KnownRow(h.id, h.name, h.createdAt, h.uid),
             ];
       for (final h in habitMaps) {
         final fileId = h['id'] as int;
         final name = h['name'] as String;
         final createdAt = _parseDate(h['createdAt']);
+        final fileUid = _uid(h['uid'], seenUids);
+        final stamp = _secs(h['updatedAt']);
         final match = replace
             ? null
-            : _findKnown(knownHabits, fileId: fileId, label: name, createdAt: createdAt);
+            : _findByUid(knownHabits, fileUid) ??
+                _findKnown(knownHabits, fileId: fileId, label: name, createdAt: createdAt);
         final targetId = replace ? fileId : match?.id;
 
         final companion = HabitsCompanion(
           id: targetId == null ? const Value.absent() : Value(targetId),
+          // A match without the file's uid adopts it (first-match rule).
+          uid: fileUid == null ? const Value.absent() : Value(fileUid),
           name: Value(name),
           description: Value(h['description'] as String?),
           colorValue: Value(h['colorValue'] as int),
@@ -198,31 +249,45 @@ class BackupRepository {
           sortOrder: Value((h['sortOrder'] as int?) ?? 0),
           scheduledWeekdays: Value((h['scheduledWeekdays'] as String?) ?? ''),
         );
+        final int rowId;
         if (targetId == null) {
-          final newId = await db.into(db.habits).insert(companion);
-          habitIds[fileId] = newId;
-          knownHabits.add(_KnownRow(newId, name, createdAt ?? DateTime.now()));
+          rowId = await db.into(db.habits).insert(companion);
+          habitIds[fileId] = rowId;
+          knownHabits.add(_KnownRow(rowId, name, createdAt ?? DateTime.now(), fileUid));
         } else {
           await db.into(db.habits).insertOnConflictUpdate(companion);
+          rowId = targetId;
           habitIds[fileId] = targetId;
           match?.label = name;
+          if (fileUid != null) match?.uid = fileUid;
         }
+        if (fileUid != null) habitIdByUid[fileUid] = rowId;
+        await _restoreStamp('habits', 'id = ?', [rowId], stamp);
       }
 
       for (final e in entryMaps) {
         final status = _parseStatus(e);
         if (status == null) continue; // v1 "done: false" rows carry no mark
-        final habitId = await _resolveId(
-          e['habitId'] as int?,
-          habitIds,
-          (id) async => await db.getHabit(id) != null,
-        );
+        final fileHabitUid = e['habitUid'] as String?;
+        final habitId = (fileHabitUid == null ? null : habitIdByUid[fileHabitUid]) ??
+            await _resolveId(
+              e['habitId'] as int?,
+              habitIds,
+              (id) async => await db.getHabit(id) != null,
+            );
         if (habitId == null) continue; // no such habit: would break the foreign key
+        final date = e['date'] as String;
         await db.setEntryStatus(
           habitId,
-          e['date'] as String,
+          date,
           status,
           amount: e['value'] as int?, // absent in v1/v2 backups
+        );
+        await _restoreStamp(
+          'habit_entries',
+          'habit_id = ? AND date = ?',
+          [habitId, date],
+          _secs(e['updatedAt']),
         );
         importedEntries++;
       }
@@ -230,26 +295,31 @@ class BackupRepository {
       for (final m in moodMaps) {
         final mood = m['mood'] as int?;
         if (mood == null || mood < 1 || mood > 5) continue;
-        await db.setMood(m['date'] as String, mood, note: m['note'] as String?);
+        final date = m['date'] as String;
+        await db.setMood(date, mood, note: m['note'] as String?);
+        await _restoreStamp('mood_entries', 'date = ?', [date], _secs(m['updatedAt']));
       }
 
       final knownTasks = replace
           ? <_KnownRow>[]
           : [
               for (final t in await db.getAllTasks())
-                _KnownRow(t.id, t.title, t.createdAt),
+                _KnownRow(t.id, t.title, t.createdAt, t.uid),
             ];
       for (final t in taskMaps) {
         final fileId = t['id'] as int;
         final title = t['title'] as String;
         final createdAt = _parseDate(t['createdAt']);
+        final fileUid = _uid(t['uid'], seenUids);
         final match = replace
             ? null
-            : _findKnown(knownTasks, fileId: fileId, label: title, createdAt: createdAt);
+            : _findByUid(knownTasks, fileUid) ??
+                _findKnown(knownTasks, fileId: fileId, label: title, createdAt: createdAt);
         final targetId = replace ? fileId : match?.id;
 
         final companion = TasksCompanion(
           id: targetId == null ? const Value.absent() : Value(targetId),
+          uid: fileUid == null ? const Value.absent() : Value(fileUid),
           title: Value(title),
           status: Value((t['status'] as String?) ?? 'todo'),
           priority: Value((t['priority'] as int?) ?? 1),
@@ -257,24 +327,34 @@ class BackupRepository {
           createdAt: createdAt == null ? const Value.absent() : Value(createdAt),
           completedAt: Value(_parseDate(t['completedAt'])),
         );
+        final int rowId;
         if (targetId == null) {
-          final newId = await db.into(db.tasks).insert(companion);
-          taskIds[fileId] = newId;
-          knownTasks.add(_KnownRow(newId, title, createdAt ?? DateTime.now()));
+          rowId = await db.into(db.tasks).insert(companion);
+          taskIds[fileId] = rowId;
+          knownTasks.add(_KnownRow(rowId, title, createdAt ?? DateTime.now(), fileUid));
         } else {
           await db.into(db.tasks).insertOnConflictUpdate(companion);
+          rowId = targetId;
           taskIds[fileId] = targetId;
           match?.label = title;
+          if (fileUid != null) match?.uid = fileUid;
         }
+        if (fileUid != null) taskIdByUid[fileUid] = rowId;
+        await _restoreStamp('tasks', 'id = ?', [rowId], _secs(t['updatedAt']));
       }
 
-      // Sessions have no identity of their own, so "the same session" means
-      // the same kind, started at the same moment, for the same length, on the
-      // same day. Replace mode keeps every row of the file as it was.
+      // Sessions have no identity of their own in old files, so "the same
+      // session" means the same kind, started at the same moment, for the same
+      // length, on the same day (a v5 file also has its uid). Replace mode
+      // keeps every row of the file as it was.
       final storedSessions = replace ? const <FocusSession>[] : await db.getAllSessions();
-      final sessionKeys = {
+      final sessionsByKey = {
         for (final s in storedSessions)
-          _sessionKey(s.kind, s.startedAt, s.durationS ?? 0, s.day),
+          _sessionKey(s.kind, s.startedAt, s.durationS ?? 0, s.day): s,
+      };
+      final sessionUids = {
+        for (final s in storedSessions)
+          if (s.uid != null) s.uid!,
       };
       for (final s in sessionMaps) {
         final started = _parseDate(s['startedAt']);
@@ -282,27 +362,91 @@ class BackupRepository {
         if (started == null || day == null) continue;
         final kind = (s['kind'] as String?) ?? 'focus';
         final durationS = (s['durationS'] as int?) ?? 0;
-        if (!replace && !sessionKeys.add(_sessionKey(kind, started, durationS, day))) {
-          continue; // already stored
+        final fileUid = _uid(s['uid'], seenUids);
+        final key = _sessionKey(kind, started, durationS, day);
+        if (!replace) {
+          final stored = sessionsByKey[key];
+          if (stored != null ||
+              (fileUid != null && sessionUids.contains(fileUid))) {
+            // Already stored. Hand it the file's uid if it has none of ours.
+            if (stored != null &&
+                fileUid != null &&
+                stored.uid != fileUid &&
+                !sessionUids.contains(fileUid)) {
+              await db.customStatement(
+                'UPDATE focus_sessions SET uid = ? WHERE id = ?',
+                [fileUid, stored.id],
+              );
+              sessionUids.add(fileUid);
+            }
+            continue;
+          }
         }
         // A session whose task is gone is still worth keeping: the focus time
         // counts, it just has no task (what deleting the task does as well).
-        final taskId = await _resolveId(
-          s['taskId'] as int?,
-          taskIds,
-          (id) async =>
-              await (db.select(db.tasks)..where((t) => t.id.equals(id))).getSingleOrNull() !=
-              null,
-        );
-        await db.insertSession(
-          kind: kind,
-          startedAt: started,
-          endedAt: _parseDate(s['endedAt']) ?? started,
-          durationS: durationS,
-          day: day,
-          taskId: taskId,
+        final fileTaskUid = s['taskUid'] as String?;
+        final taskId = (fileTaskUid == null ? null : taskIdByUid[fileTaskUid]) ??
+            await _resolveId(
+              s['taskId'] as int?,
+              taskIds,
+              (id) async =>
+                  await (db.select(db.tasks)..where((t) => t.id.equals(id)))
+                      .getSingleOrNull() !=
+                  null,
+            );
+        final stamp = _secs(s['updatedAt']);
+        await db.into(db.focusSessions).insert(
+              FocusSessionsCompanion.insert(
+                kind: Value(kind),
+                startedAt: started,
+                endedAt: Value(_parseDate(s['endedAt']) ?? started),
+                durationS: Value(durationS),
+                day: day,
+                taskId: Value(taskId),
+                uid: fileUid == null ? const Value.absent() : Value(fileUid),
+                updatedAt: stamp == null ? const Value.absent() : Value(stamp),
+              ),
+            );
+        if (fileUid != null) sessionUids.add(fileUid);
+        sessionsByKey.putIfAbsent(
+          key,
+          () => FocusSession(
+            id: -1,
+            uid: fileUid,
+            updatedAt: stamp ?? 0,
+            kind: kind,
+            startedAt: started,
+            endedAt: started,
+            durationS: durationS,
+            taskId: taskId,
+            day: day,
+          ),
         );
         importedSessions++;
+      }
+
+      // Replacing from a v5 file also restores its delete log - except for
+      // anything the file itself still has alive.
+      if (replace) {
+        final alive = <String>{
+          for (final h in habitMaps) 'habit:${h['uid']}',
+          for (final t in taskMaps) 'task:${t['uid']}',
+          for (final s in sessionMaps) 'session:${s['uid']}',
+          for (final e in entryMaps) 'entry:${e['habitUid']}|${e['date']}',
+          for (final m in moodMaps) 'mood:${m['date']}',
+        };
+        for (final d in deletedMaps) {
+          final kind = d['kind'] as String?;
+          final key = d['key'] as String?;
+          final at = _secs(d['deletedAt']);
+          if (kind == null || key == null || at == null) continue;
+          if (alive.contains('$kind:$key')) continue;
+          await db.customStatement(
+            'INSERT INTO silinenler (kind, anahtar, deleted_at) VALUES (?, ?, ?) '
+            'ON CONFLICT (kind, anahtar) DO UPDATE SET deleted_at = excluded.deleted_at',
+            [kind, key, at],
+          );
+        }
       }
     });
 
@@ -313,6 +457,52 @@ class BackupRepository {
       tasks: taskMaps.length,
       sessions: importedSessions,
     );
+  }
+
+  /// Puts the file's `updatedAt` back on a row that was just written.
+  ///
+  /// Writing a row stamps it "now" (a trigger); a merge must instead keep the
+  /// file's value, or an old backup would look like the newest edit and beat
+  /// real changes made elsewhere. No-op for files without the field (v1-v4).
+  Future<void> _restoreStamp(
+    String table,
+    String where,
+    List<Object> args,
+    int? stamp,
+  ) async {
+    if (stamp == null) return;
+    await db.customStatement(
+      'UPDATE $table SET updated_at = ? WHERE $where',
+      [stamp, ...args],
+    );
+  }
+
+  /// A usable uid from the file, or null when it is absent, silly, or already
+  /// used earlier in the same file (the row then gets a fresh uid).
+  static String? _uid(dynamic v, Set<String> seen) {
+    if (v is! String || v.isEmpty || v.length > 64) return null;
+    return seen.add(v) ? v : null;
+  }
+
+  /// File timestamp -> unix seconds (at least 1, since 0 means "unstamped").
+  static int? _secs(dynamic v) {
+    final d = _parseDate(v);
+    if (d == null) return null;
+    final s = d.millisecondsSinceEpoch ~/ 1000;
+    return s < 1 ? 1 : s;
+  }
+
+  static String _isoSecs(int secs) => DateTime.fromMillisecondsSinceEpoch(
+        secs * 1000,
+        isUtc: true,
+      ).toIso8601String();
+
+  static _KnownRow? _findByUid(List<_KnownRow> known, String? uid) {
+    if (uid == null) return null;
+    for (final row in known) {
+      if (row.uid == uid) return row;
+    }
+    return null;
   }
 
   /// Finds the local row a backup row stands for, or null when it is new.
@@ -391,5 +581,6 @@ class _KnownRow {
   final int id;
   String label;
   final DateTime createdAt;
-  _KnownRow(this.id, this.label, this.createdAt);
+  String? uid;
+  _KnownRow(this.id, this.label, this.createdAt, [this.uid]);
 }

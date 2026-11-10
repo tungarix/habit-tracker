@@ -3,8 +3,18 @@ import 'package:drift/drift.dart';
 import '../../core/enums.dart';
 
 /// A habit the user wants to track.
+@TableIndex(name: 'habits_uid_idx', columns: {#uid}, unique: true)
 class Habits extends Table {
   IntColumn get id => integer().autoIncrement()();
+
+  /// Sync identity (UUID v4), filled by a trigger on insert. Nullable only
+  /// because SQLite cannot `ADD COLUMN` a UNIQUE one; the unique index does
+  /// the real work. See docs/senkron.md.
+  TextColumn get uid => text().nullable()();
+
+  /// Unix seconds of the last change, kept current by triggers (0 = "not
+  /// stamped yet", replaced on insert). Plain int: sync compares seconds.
+  IntColumn get updatedAt => integer().withDefault(const Constant(0))();
   TextColumn get name => text().withLength(min: 1, max: 100)();
   TextColumn get description => text().nullable()();
 
@@ -52,6 +62,9 @@ class HabitEntries extends Table {
 
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
+  /// See [Habits.updatedAt].
+  IntColumn get updatedAt => integer().withDefault(const Constant(0))();
+
   /// One entry per habit per day.
   @override
   List<Set<Column>> get uniqueKeys => [
@@ -71,12 +84,22 @@ class MoodEntries extends Table {
 
   TextColumn get note => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  /// See [Habits.updatedAt].
+  IntColumn get updatedAt => integer().withDefault(const Constant(0))();
 }
 
 /// A simple task. Deliberately flat: no projects, tags or subtasks — those are
 /// in the blueprint's "fridge" until the basics earn their keep.
+@TableIndex(name: 'tasks_uid_idx', columns: {#uid}, unique: true)
 class Tasks extends Table {
   IntColumn get id => integer().autoIncrement()();
+
+  /// See [Habits.uid].
+  TextColumn get uid => text().nullable()();
+
+  /// See [Habits.updatedAt].
+  IntColumn get updatedAt => integer().withDefault(const Constant(0))();
   TextColumn get title => text().withLength(min: 1, max: 200)();
 
   /// [TaskStatus.storageName]: 'todo' | 'doing' | 'done'.
@@ -93,8 +116,15 @@ class Tasks extends Table {
 }
 
 /// One focus (or break) run of the timer.
+@TableIndex(name: 'focus_sessions_uid_idx', columns: {#uid}, unique: true)
 class FocusSessions extends Table {
   IntColumn get id => integer().autoIncrement()();
+
+  /// See [Habits.uid].
+  TextColumn get uid => text().nullable()();
+
+  /// See [Habits.updatedAt].
+  IntColumn get updatedAt => integer().withDefault(const Constant(0))();
 
   /// [SessionKind.storageName]: 'focus' | 'break'.
   TextColumn get kind => text().withDefault(const Constant('focus'))();
@@ -122,4 +152,24 @@ class Settings extends Table {
 
   @override
   Set<Column> get primaryKey => {key};
+}
+
+/// Delete log ("tombstones") for sync: one row per deleted record, written by
+/// `AFTER DELETE` triggers so no delete path can forget it.
+///
+/// `kind` is habit | task | session | entry | mood; `anahtar` is the uid, or
+/// `habitUid|date` for an entry, or the date for a mood. `deletedAt` is unix
+/// seconds. The table keeps its Turkish name on purpose: it is part of the
+/// shared (desktop + mobile) schema.
+@DataClassName('Tombstone')
+class Silinenler extends Table {
+  @override
+  String get tableName => 'silinenler';
+
+  TextColumn get kind => text()();
+  TextColumn get anahtar => text()();
+  IntColumn get deletedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {kind, anahtar};
 }

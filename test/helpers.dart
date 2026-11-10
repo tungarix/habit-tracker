@@ -18,6 +18,8 @@ Habit testHabit({
 }) {
   return Habit(
     id: id,
+    uid: 'habit-uid-$id',
+    updatedAt: 1,
     name: name,
     description: null,
     colorValue: 0xFF4CAF50,
@@ -57,6 +59,8 @@ Task testTask({
 }) {
   return Task(
     id: id,
+    uid: 'task-uid-$id',
+    updatedAt: 1,
     title: title,
     status: status.storageName,
     priority: priority.value,
@@ -74,6 +78,8 @@ FocusSession testSession({
 }) {
   return FocusSession(
     id: id,
+    uid: 'session-uid-$id',
+    updatedAt: 1,
     kind: kind.storageName,
     startedAt: day,
     endedAt: day.add(Duration(seconds: durationS)),
@@ -90,5 +96,6 @@ MoodEntry testMood(DateTime day, int mood, {String? note}) {
     mood: mood,
     note: note,
     createdAt: day,
+    updatedAt: 1,
   );
 }

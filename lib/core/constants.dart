@@ -7,7 +7,7 @@ library;
 class AppConstants {
   static const String appName = 'Aktenak';
   static const String backupFormat = 'aktenak-habit-tracker';
-  static const int backupVersion = 4;
+  static const int backupVersion = 5;
 
   /// Database file name (stored in the platform application-support dir).
   static const String dbFileName = 'aktenak.sqlite';
@@ -18,6 +18,14 @@ class AppConstants {
 
   /// Settings key for the user's day-start hour.
   static const String dayStartHourKey = 'dayStartHour';
+
+  /// Settings key holding the unix seconds `dayStartHour` last changed
+  /// (maintained by a trigger; used for last-writer-wins in sync).
+  static const String dayStartHourStampKey = 'dayStartHourUpdatedAt';
+
+  /// Settings that travel in a `.habitsync` file. Everything else in
+  /// `Settings` (theme, reminder, window placement, ...) belongs to the device.
+  static const List<String> syncedSettingKeys = [dayStartHourKey];
 
   /// Settings key for the theme mode.
   static const String themeModeKey = 'themeMode';
