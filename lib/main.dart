@@ -7,10 +7,14 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'app.dart';
 import 'data/data_location.dart';
 import 'data/providers.dart';
+import 'data/update/uygula.dart' show guncelleBayragi;
+import 'features/update/uygulayici_ekrani.dart';
 import 'shared/desktop_integration.dart';
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Güncelleme uygulayıcısı: veritabanı/tepsi/pencere yöneticisi açılmadan, yalnız dosyaları değiştirir.
+  if (args.contains(guncelleBayragi)) return uygulayiciCalistir(args);
   // Load locale data so Turkish date formatting works out of the box.
   await initializeDateFormatting('tr');
 
@@ -40,7 +44,10 @@ Future<void> main(List<String> args) async {
   _startAutoBackup(container);
 
   runApp(
-    UncontrolledProviderScope(container: container, child: const AktenakApp()),
+    UncontrolledProviderScope(
+      container: container,
+      child: const AktenakApp(guncellemeAcilisi: true),
+    ),
   );
   WidgetsBinding.instance.addPostFrameCallback((_) => tray.onFirstFrame());
 }

@@ -15,6 +15,7 @@ import '../../data/sync/sync_format.dart';
 import '../../data/sync/sync_import.dart';
 import '../../shared/desktop_integration.dart';
 import '../eslestir/eslestir_dialog.dart';
+import '../update/guncelleme_bolumu.dart';
 
 /// Export / import the whole database as a single JSON file.
 class BackupScreen extends ConsumerStatefulWidget {
@@ -146,7 +147,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     if (result == null || result.files.isEmpty) return;
     final picked = result.files.single;
     if (picked.size > syncMaxFileBytes) {
-      _toast('Dosya çok büyük (en çok ${syncMaxFileBytes ~/ (1024 * 1024)} MB).');
+      _toast(
+        'Dosya çok büyük (en çok ${syncMaxFileBytes ~/ (1024 * 1024)} MB).',
+      );
       return;
     }
 
@@ -254,7 +257,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             _ActionCard(
               icon: Icons.phone_android,
               title: 'Telefon için dışa aktar',
-              subtitle: 'Tüm veriyi bir .habitsync dosyasına yaz, telefonda aç.',
+              subtitle:
+                  'Tüm veriyi bir .habitsync dosyasına yaz, telefonda aç.',
               onTap: _busy ? null : _syncExport,
             ),
             const SizedBox(height: 12),
@@ -334,6 +338,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+            Text('Güncelleme', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            const GuncellemeBolumu(),
             const SizedBox(height: 24),
             Text('Veri', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),

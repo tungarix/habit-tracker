@@ -10,11 +10,15 @@ import 'features/habits/habit_edit_dialog.dart';
 import 'features/habits/habits_screen.dart';
 import 'features/home/grid_screen.dart';
 import 'features/stats/stats_screen.dart';
+import 'features/update/guncelleme_acilis.dart';
 import 'features/tasks/tasks_screen.dart';
 import 'shared/theme.dart';
 
 class AktenakApp extends ConsumerWidget {
-  const AktenakApp({super.key});
+  const AktenakApp({super.key, this.guncellemeAcilisi = false});
+
+  /// Açılışta güncelleme denetimi/ilk onay (yalnız gerçek uygulama; testler kapalı bırakır).
+  final bool guncellemeAcilisi;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,7 +32,10 @@ class AktenakApp extends ConsumerWidget {
       locale: const Locale('tr'),
       supportedLocales: const [Locale('tr'), Locale('en')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      home: const HomeShell(),
+      home: GuncellemeAcilis(
+        etkin: guncellemeAcilisi,
+        child: const HomeShell(),
+      ),
     );
   }
 }

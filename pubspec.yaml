@@ -48,6 +48,7 @@ dependencies:
   screen_retriever: ^0.2.2
   qr: 4.0.1
   basic_utils: 5.8.2
+  archive: 4.6.0
 
 dev_dependencies:
   flutter_test:

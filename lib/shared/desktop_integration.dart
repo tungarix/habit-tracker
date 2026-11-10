@@ -102,7 +102,12 @@ class LaunchAtLoginSetting {
 /// notification platform channels widget tests cannot provide.
 /// Windows/Linux only; macOS/mobile builds skip it entirely.
 class TrayService with WindowListener {
-  TrayService(this._container, {this.startInTray = false});
+  TrayService(this._container, {this.startInTray = false}) {
+    current = this;
+  }
+
+  /// The running service (null in tests); the updater closes the app through it.
+  static TrayService? current;
 
   final ProviderContainer _container;
 
@@ -297,14 +302,7 @@ class TrayService with WindowListener {
       }
     }
     menu.addSeparator();
-    addItem(
-      'Çıkış',
-      onClick: () async {
-        await _savePlacement();
-        await windowManager.setPreventClose(false);
-        await windowManager.destroy();
-      },
-    );
+    addItem('Çıkış', onClick: quit);
 
     trayIcon.setContextMenu(menu);
 
@@ -321,6 +319,14 @@ class TrayService with WindowListener {
       }
       oldMenu?.dispose();
     });
+  }
+
+  /// The one real exit: tray "Çıkış" and the updater both end here
+  /// (no `exit(0)` — the window must close the normal way).
+  Future<void> quit() async {
+    await _savePlacement();
+    await windowManager.setPreventClose(false);
+    await windowManager.destroy();
   }
 
   @override
