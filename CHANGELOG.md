@@ -14,5 +14,8 @@ Bu dosya yeni tutulmaya başlandı; eski sürümlerin notları GitHub Releases s
 - JSON yedek biçimi v5 (uid, updatedAt, silinenler). v1–v4 yedekleri okunmaya devam eder.
 - Düzeltme: v1 şemasından yükseltme `value` sütunu yüzünden hata veriyordu (v1 veritabanında
   `habit_entries.value` yok); artık yükseltme tamamlanır.
+- Güncelleyici `SHA256SUMS.txt.sig` Ed25519 imzasını doğrular; imzasız ya da bozuk imzalı sürüm
+  kurulmaz. `release.yml` imzayı `HABIT_UPDATE_SIGNING_KEY` sırrıyla üretir. Ayrıntı:
+  `docs/guncelleme-imzasi.md`. Yeni bağımlılık: `pinenacl` 0.6.0 (saf Dart).
 - CI ve release iş akışlarında Flutter sürümü 3.47.5'e sabitlendi; PR şablonuna "mobilde
   `esitle.ps1` çalıştır" maddesi eklendi.

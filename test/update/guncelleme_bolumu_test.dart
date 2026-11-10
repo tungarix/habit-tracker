@@ -48,6 +48,7 @@ void main() {
       klasor: Directory(p.join(tmp.path, 'g')),
       surum: '1.3.3',
       ag: Ag(surum: '1.3.3', apiTaban: gh!.taban, ekSunucular: {'127.0.0.1'}),
+      acikAnahtar: gh.acikAnahtar,
     );
     final kurucu = Kurucu(
       kurulumKlasoru: tmp,
@@ -84,7 +85,7 @@ void main() {
     await tester.tap(find.text('Şimdi denetle'));
     await bekle(tester, find.textContaining('Yeni sürüm 9.9.9'));
     expect(find.textContaining('Yeni sürüm 9.9.9'), findsOneWidget);
-    expect(find.textContaining('imzalı değil'), findsOneWidget);
+    expect(find.textContaining('imzası ve SHA-256'), findsOneWidget);
 
     await tester.tap(find.text('İndir ve doğrula'));
     await bekle(tester, find.textContaining('Güncelleme hazır'));
@@ -113,6 +114,7 @@ void main() {
       klasor: Directory(p.join(tmp.path, 'g')),
       surum: '1.3.3',
       ag: Ag(surum: '1.3.3', apiTaban: gh!.taban, ekSunucular: {'127.0.0.1'}),
+      acikAnahtar: gh.acikAnahtar,
     );
     final kurucu = Kurucu(
       kurulumKlasoru: tmp,
@@ -172,6 +174,7 @@ void main() {
       klasor: Directory(p.join(tmp.path, 'g')),
       surum: '1.3.3',
       ag: Ag(surum: '1.3.3', apiTaban: gh.taban, ekSunucular: {'127.0.0.1'}),
+      acikAnahtar: gh.acikAnahtar,
     );
     final kurucu = Kurucu(
       kurulumKlasoru: tmp,

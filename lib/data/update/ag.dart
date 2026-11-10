@@ -10,7 +10,9 @@ import '../../core/sha256.dart';
 import 'saf.dart';
 
 const _jsonSiniri = 1024 * 1024;
-const _ozetSiniri = 64 * 1024;
+
+/// SHA256SUMS.txt üst sınırı.
+const ozetSiniri = 64 * 1024;
 const _enFazlaYonlendirme = 5;
 
 /// [kod] arayüzde yerelleştirilen kısa tanımlayıcı (`limit`, `ag_hatasi`, `ozet_uyusmuyor`...).
@@ -149,18 +151,15 @@ class Ag {
     }
   }
 
-  /// Küçük bir metin dosyası (SHA256SUMS.txt).
-  Future<String> metinIndir(String url) async {
+  /// Küçük bir dosya (SHA256SUMS.txt, .sig), ham baytlar: imza bayt üzerinden doğrulanır, metne çevrilmez.
+  Future<List<int>> baytIndir(String url, int sinir) async {
     try {
       final (istemci, yanit) = await _ac(url);
       try {
         if (yanit.statusCode != 200) {
           throw GuncellemeHatasi('ag_hatasi', 'HTTP ${yanit.statusCode}');
         }
-        return utf8.decode(
-          await _oku(yanit, _ozetSiniri),
-          allowMalformed: true,
-        );
+        return await _oku(yanit, sinir);
       } finally {
         istemci.close(force: true);
       }

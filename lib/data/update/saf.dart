@@ -1,6 +1,8 @@
 // Güncelleme mantığının SAF kısmı: sürüm karşılaştırma, release çözümleme, özet ayrıştırma.
 // Ağ ve dosya yok; mobil güncelleyicinin (habit-tracker-mobil) masaüstü uyarlamasıdır.
 // Güvenlik kararları (hangi adres, hangi ad, hangi boyut) burada.
+import 'imza.dart';
+
 /// Kabul edilen en büyük zip (gerçek yayın boyutu ölçülmedi; sınır bozuk/kötü niyetli dosyayı ayıklar).
 /// `--dart-define=GUNCELLEME_MAKS_BAYT` yalnız geliştirme/uçtan uca denemede.
 const zipEnFazlaBayt = int.fromEnvironment(
@@ -48,6 +50,7 @@ class Yayin {
     required this.zipBoyut,
     required this.ozetUrl,
     required this.sayfaUrl,
+    this.imzaUrl,
   });
 
   final String surum; // "0.4.0" (başında v yok)
@@ -55,6 +58,9 @@ class Yayin {
   final int zipBoyut;
   final String ozetUrl;
   final String sayfaUrl;
+
+  /// `SHA256SUMS.txt.sig` adresi; null = sürümde imza yok (kurulum `imza_yok` ile reddedilir).
+  final String? imzaUrl;
 
   /// Zip varlığının beklenen adı (release.yml sözleşmesi; etiket `v` ile).
   String get zipAdi => 'aktenak-habit-tracker-v$surum-windows.zip';
@@ -65,6 +71,7 @@ class Yayin {
     'zip_boyut': zipBoyut,
     'ozet_url': ozetUrl,
     'sayfa_url': sayfaUrl,
+    'imza_url': ?imzaUrl,
   };
 
   /// Saklı kayıt elle bozulmuş olabilir: tip ve alan denetimi, bozuksa null.
@@ -83,7 +90,15 @@ class Yayin {
       return null;
     }
     if (surumCoz(s) == null || b <= 0 || b > zipEnFazlaBayt) return null;
-    return Yayin(surum: s, zipUrl: a, zipBoyut: b, ozetUrl: o, sayfaUrl: p);
+    final i = j['imza_url'];
+    return Yayin(
+      surum: s,
+      zipUrl: a,
+      zipBoyut: b,
+      ozetUrl: o,
+      sayfaUrl: p,
+      imzaUrl: i is String ? i : null,
+    );
   }
 }
 
@@ -140,12 +155,13 @@ Yayin? yayinCoz(
   final varliklar = veri['assets'];
   if (varliklar is! List) return null;
   final zipAdi = 'aktenak-habit-tracker-v$surum-windows.zip';
-  Map? zip, ozet;
+  Map? zip, ozet, imza;
   for (final v in varliklar) {
     if (v is! Map) continue;
     // Aynı adlı ikinci varlık yok sayılır (ilk eşleşme).
     if (v['name'] == zipAdi) zip ??= v;
     if (v['name'] == 'SHA256SUMS.txt') ozet ??= v;
+    if (v['name'] == imzaVarlikAdi) imza ??= v;
   }
   if (zip == null || ozet == null) return null;
   final boyut = zip['size'];
@@ -157,6 +173,8 @@ Yayin? yayinCoz(
     return null;
   }
   final sayfa = veri['html_url'];
+  // İmza varlığı yok ya da adresi izinsizse null: sürüm yine teklif edilir, kurulum imza_yok ile reddedilir.
+  final imzaUrl = imza?['browser_download_url'];
   return Yayin(
     surum: surum,
     zipUrl: zipUrl as String,
@@ -165,6 +183,7 @@ Yayin? yayinCoz(
     sayfaUrl: adresUygun(sayfa, depo, ekSunucular)
         ? sayfa as String
         : 'https://github.com/$depo/releases',
+    imzaUrl: adresUygun(imzaUrl, depo, ekSunucular) ? imzaUrl as String : null,
   );
 }
 

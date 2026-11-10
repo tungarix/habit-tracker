@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:aktenak_habit_tracker/data/database/database.dart';
@@ -8,6 +9,7 @@ import 'package:aktenak_habit_tracker/data/update/paket.dart';
 import 'package:aktenak_habit_tracker/data/update/saf.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pinenacl/ed25519.dart';
 import 'package:path/path.dart' as p;
 
 import 'yardimci.dart';
@@ -38,6 +40,7 @@ void main() {
       klasor: Directory(p.join(tmp.path, 'guncelleme')),
       surum: mevcut,
       ag: agKur(mevcut),
+      acikAnahtar: gh.acikAnahtar,
     );
   }
 
@@ -111,6 +114,91 @@ void main() {
       gh.yanlisOzet = '0' * 64;
       await expectLater(g.hazirla(y), _kod('ozet_uyusmuyor'));
       expect(g.klasor.existsSync(), isFalse);
+    });
+
+    group('Ed25519 imza', () {
+      test('geçerli imza: kurulum sürer', () async {
+        await kur(zipUret());
+        final y = await yeni();
+        expect(y.imzaUrl, isNotNull);
+        await g.hazirla(y);
+        expect(g.yeniPaket.existsSync(), isTrue);
+      });
+
+      test('bozuk imza (bir bit) imza_gecersiz, zip indirilmez', () async {
+        await kur(zipUret());
+        final y = await yeni();
+        gh.imzaGovdesi = [...gh.dogruImza]..[10] ^= 1;
+        await expectLater(g.hazirla(y), _kod('imza_gecersiz'));
+        expect(g.klasor.existsSync(), isFalse);
+        expect(gh.istekler, isNot(contains('/dl/${gh.zipAdi}')));
+      });
+
+      test('yanlış uzunlukta imza imza_gecersiz', () async {
+        await kur(zipUret());
+        final y = await yeni();
+        gh.imzaGovdesi = [1, 2, 3];
+        await expectLater(g.hazirla(y), _kod('imza_gecersiz'));
+      });
+
+      test('başka anahtarla atılmış imza imza_gecersiz', () async {
+        await kur(zipUret());
+        final y = await yeni();
+        gh.imzaGovdesi = SigningKey.generate()
+            .sign(Uint8List.fromList(utf8.encode(gh.ozetMetni)))
+            .signature
+            .asTypedList;
+        await expectLater(g.hazirla(y), _kod('imza_gecersiz'));
+        expect(g.klasor.existsSync(), isFalse);
+      });
+
+      test('uygulamadaki açık anahtar farklıysa imza_gecersiz', () async {
+        await kur(zipUret());
+        final y = await yeni();
+        final baska = Guncelleyici(
+          ayarlar: g.ayarlar,
+          klasor: g.klasor,
+          surum: '1.3.3',
+          ag: g.ag,
+          acikAnahtar: SigningKey.generate().verifyKey.asTypedList,
+        );
+        await expectLater(baska.hazirla(y), _kod('imza_gecersiz'));
+      });
+
+      test('.sig varlığı listede yoksa imza_yok', () async {
+        await kur(zipUret());
+        gh.imzaListede = false;
+        final y = await yeni();
+        expect(y.imzaUrl, isNull);
+        await expectLater(g.hazirla(y), _kod('imza_yok'));
+        expect(g.klasor.existsSync(), isFalse);
+      });
+
+      test('.sig listede ama sunucuda 404 ise imza_yok', () async {
+        await kur(zipUret());
+        final y = await yeni();
+        gh.imza404 = true;
+        await expectLater(g.hazirla(y), _kod('imza_yok'));
+      });
+
+      test(
+        'kurcalanmış SHA256SUMS (hash değiştirilmiş) imza_gecersiz',
+        () async {
+          // Saldırgan özeti değiştirir; imza yeni metinle eşleşmez.
+          await kur(zipUret());
+          final y = await yeni();
+          gh.ozetSunulan = '${'a' * 64}  ${gh.zipAdi}\r\n';
+          await expectLater(g.hazirla(y), _kod('imza_gecersiz'));
+          expect(g.klasor.existsSync(), isFalse);
+        },
+      );
+
+      test('SHA256SUMS sonuna eklenen satır da imzayı bozar', () async {
+        await kur(zipUret());
+        final y = await yeni();
+        gh.ozetSunulan = '${gh.ozetMetni}\n';
+        await expectLater(g.hazirla(y), _kod('imza_gecersiz'));
+      });
     });
 
     test('SHA256SUMS içinde geçerli satır yoksa ozet_bulunamadi', () async {

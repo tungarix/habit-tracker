@@ -62,6 +62,15 @@ jobs:
           $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
           "$hash  $zip" | Set-Content -Path SHA256SUMS.txt -Encoding ascii
 
+      # SHA256SUMS.txt'in Ed25519 ayrık imzası. Güncelleyici bunu uygulamaya gömülü açık anahtarla
+      # doğrular; sır yoksa ya da yanlışsa betik hata verir ve release OLUŞMAZ. Anahtar yalnız bu
+      # adımın ortamında, hiçbir komuta argüman olarak verilmez ve yazdırılmaz.
+      - name: SHA256SUMS.txt imzala
+        shell: pwsh
+        env:
+          HABIT_UPDATE_SIGNING_KEY: ${{ secrets.HABIT_UPDATE_SIGNING_KEY }}
+        run: dart run scripts/guncelleme_imza.dart imzala SHA256SUMS.txt SHA256SUMS.txt.sig
+
       - name: Build provenance attestation üret
         uses: actions/attest-build-provenance@v2
         with:
@@ -73,7 +82,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: >
           gh release create "${{ github.ref_name }}"
-          aktenak-habit-tracker-*-windows.zip SHA256SUMS.txt
+          aktenak-habit-tracker-*-windows.zip SHA256SUMS.txt SHA256SUMS.txt.sig
           --draft
           --title "Aktenak Habit Tracker ${{ github.ref_name }}"
           --notes ""
@@ -86,3 +95,4 @@ jobs:
           path: |
             aktenak-habit-tracker-*-windows.zip
             SHA256SUMS.txt
+            SHA256SUMS.txt.sig

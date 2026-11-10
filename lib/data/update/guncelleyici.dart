@@ -1,6 +1,7 @@
 // Güncelleyici: denetim zamanı, ETag ve bulunan sürümün saklanması + indirme/doğrulama/açma.
 // Durum Settings tablosunda (ayarlar.dart) (kullanıcı verisi değil: bozuksa "hiç denetlenmedi" sayılır).
 // Kurulum (dosya değiştirme) burada DEĞİL: `uygula.dart` (yeni sürümün kendi exe'si); akışı `akis.dart` yönetir.
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -8,6 +9,7 @@ import 'package:path/path.dart' as p;
 import '../../core/sha256.dart';
 import 'ag.dart';
 import 'ayarlar.dart';
+import 'imza.dart';
 import 'paket.dart';
 import 'saf.dart';
 
@@ -21,7 +23,9 @@ class Guncelleyici {
     required this.surum,
     Ag? ag,
     DateTime Function()? saat,
+    List<int>? acikAnahtar,
   }) : ag = ag ?? Ag(surum: surum),
+       acikAnahtar = acikAnahtar ?? acikAnahtarBayt(),
        _saat = saat ?? DateTime.now;
 
   final GuncellemeAyarlari ayarlar;
@@ -30,6 +34,9 @@ class Guncelleyici {
   final Directory klasor;
   final String surum;
   final Ag ag;
+
+  /// SHA256SUMS.txt imzasının doğrulandığı Ed25519 açık anahtarı (üretimde koda gömülü; yalnız testler değiştirir).
+  final List<int> acikAnahtar;
   final DateTime Function() _saat;
 
   /// Açılmış yeni paket (`hazirla` başarılıysa dolu).
@@ -114,7 +121,7 @@ class Guncelleyici {
     }
   }
 
-  /// [y]'yi indirir, SHA-256 ile DOĞRULAR ve [yeniPaket]'e açar. Özet bulunamaz/belirsizse, tutmazsa ya da
+  /// [y]'nin SHA256SUMS.txt imzasını (Ed25519) doğrular, zip'i indirir, SHA-256 ile DOĞRULAR ve [yeniPaket]'e açar. Özet bulunamaz/belirsizse, tutmazsa ya da
   /// paket bozuksa her şey silinir ve [GuncellemeHatasi] atılır. Önceki hazırlık önce temizlenir.
   Future<void> hazirla(
     Yayin y, {
@@ -127,7 +134,12 @@ class Guncelleyici {
     await temizle();
     await klasor.create(recursive: true);
     try {
-      final beklenen = ozetCoz(await ag.metinIndir(y.ozetUrl), y.zipAdi);
+      final ozetBayt = await ag.baytIndir(y.ozetUrl, ozetSiniri);
+      await _imzaDogrula(y, ozetBayt);
+      final beklenen = ozetCoz(
+        utf8.decode(ozetBayt, allowMalformed: true),
+        y.zipAdi,
+      );
       if (beklenen == null) {
         throw const GuncellemeHatasi(
           'ozet_bulunamadi',
@@ -154,6 +166,22 @@ class Guncelleyici {
     } on Object {
       await temizle();
       rethrow;
+    }
+  }
+
+  /// İmzasız / bozuk / başka anahtarla atılmış imza = kurulum reddi. Zip bu doğrulamadan ÖNCE indirilmez.
+  Future<void> _imzaDogrula(Yayin y, List<int> ozetBayt) async {
+    final url = y.imzaUrl;
+    if (url == null) throw const GuncellemeHatasi('imza_yok');
+    final List<int> imza;
+    try {
+      imza = await ag.baytIndir(url, 256);
+    } on GuncellemeHatasi catch (e) {
+      // 404: sürümde .sig varlığı yok
+      throw e.ayrinti == 'HTTP 404' ? const GuncellemeHatasi('imza_yok') : e;
+    }
+    if (!imzaGecerli(ozetBayt, imza, acikAnahtar)) {
+      throw const GuncellemeHatasi('imza_gecersiz');
     }
   }
 

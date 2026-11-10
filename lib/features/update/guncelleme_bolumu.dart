@@ -18,6 +18,10 @@ String guncellemeHataMetni(String kod) => switch (kod) {
     'Sürümün doğrulama özeti bulunamadı, güncelleme yapılmadı.',
   'ozet_uyusmuyor' =>
     'İndirilen dosya doğrulanamadı (SHA-256 uyuşmuyor). Silindi.',
+  'imza_yok' =>
+    'Bu sürümün imzası yok; güvenlik nedeniyle kurulmadı. Yeni sürümü elle indir.',
+  'imza_gecersiz' =>
+    'Sürümün imzası geçersiz; güvenlik nedeniyle kurulmadı. Yeni sürümü elle indir.',
   'paket_bozuk' => 'Güncelleme paketi bozuk ya da beklenmeyen içerikte.',
   'klasor_yazilamaz' =>
     'Uygulamanın klasörüne yazılamıyor (ör. Program Files). Yeni sürümü elle indir.',
@@ -194,7 +198,7 @@ class _GuncellemeBolumuState extends ConsumerState<GuncellemeBolumu> {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Bu sürüm imzalı değil; yalnız SHA-256 ile doğrulandı.',
+                'Kurulumdan önce sürümün imzası ve SHA-256 özeti doğrulanır.',
               ),
               const SizedBox(height: 8),
               if (_asama == _Asama.indiriyor) ...[

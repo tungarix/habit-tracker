@@ -49,6 +49,8 @@ dependencies:
   qr: 4.0.1
   basic_utils: 5.8.2
   archive: 4.6.0
+  # Ed25519 imza doğrulaması (güncelleyici). Saf Dart, çalışma zamanı bağımlılığı yok, ffi yok.
+  pinenacl: 0.6.0
 
 dev_dependencies:
   flutter_test:
