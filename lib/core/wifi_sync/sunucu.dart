@@ -118,7 +118,11 @@ class EslestirmeSunucusu {
   /// Sunucuyu açar, QR içeriğini hazırlar. Özel ağ yoksa [StateError].
   Future<QrBaglanti> baslat() async {
     final aday = adresler ?? await ozelAdaylar();
-    if (aday.isEmpty) throw StateError('Özel bir ağa bağlı değilsin.');
+    if (aday.isEmpty) {
+      throw StateError(
+        'Özel bir ağa bağlı değilsin. Wi-Fi ağına bağlan ya da dosya ile senkronu kullan.',
+      );
+    }
     final cert = _sertifika ??= await OturumSertifikasi.uret(aday);
     final ctx = cert.baglam();
     var port = 0;

@@ -14,6 +14,7 @@ import '../../data/sync/sync_export.dart';
 import '../../data/sync/sync_format.dart';
 import '../../data/sync/sync_import.dart';
 import '../../shared/desktop_integration.dart';
+import '../eslestir/eslestir_dialog.dart';
 
 /// Export / import the whole database as a single JSON file.
 class BackupScreen extends ConsumerStatefulWidget {
@@ -234,6 +235,15 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               subtitle:
                   'Bir .json yedeğinden geri yükle (birleştir veya değiştir).',
               onTap: _busy ? null : _import,
+            ),
+            const SizedBox(height: 24),
+            _ActionCard(
+              icon: Icons.qr_code_2,
+              title: 'Telefonla eşleştir (Wi-Fi)',
+              subtitle:
+                  'QR kodu telefonla okut; aynı Wi-Fi ağında iki yönlü senkron. '
+                  'Hesap ve bulut gerekmez.',
+              onTap: _busy ? null : () => eslestirDialogAc(context),
             ),
             const SizedBox(height: 24),
             Text(
