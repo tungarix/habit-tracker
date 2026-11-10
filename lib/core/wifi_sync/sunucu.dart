@@ -116,6 +116,24 @@ class EslestirmeSunucusu {
   }
 
   /// Sunucuyu açar, QR içeriğini hazırlar. Özel ağ yoksa [StateError].
+  /// Telefon yalnız [portEnAz]-[portEnCok] arasını kabul eder (qrCoz); Linux'ta işletim sisteminin
+  /// geçici port aralığı bunun altından başlayabildiği için ilk port burada seçilir.
+  Future<HttpServer> _bagla(String adres, int port, SecurityContext ctx) async {
+    if (port != 0) return HttpServer.bindSecure(InternetAddress(adres), port, ctx);
+    final rnd = Random.secure();
+    for (var i = 0;; i++) {
+      try {
+        return await HttpServer.bindSecure(
+          InternetAddress(adres),
+          portEnAz + rnd.nextInt(portEnCok - portEnAz + 1),
+          ctx,
+        );
+      } on SocketException {
+        if (i >= 30) rethrow;
+      }
+    }
+  }
+
   Future<QrBaglanti> baslat() async {
     final aday = adresler ?? await ozelAdaylar();
     if (aday.isEmpty) {
@@ -129,7 +147,7 @@ class EslestirmeSunucusu {
     final alinan = <String>[];
     for (final a in aday) {
       try {
-        final s = await HttpServer.bindSecure(InternetAddress(a), port, ctx);
+        final s = await _bagla(a, port, ctx);
         port = s.port;
         _sunucular.add(s);
         alinan.add(a);
@@ -190,8 +208,10 @@ class EslestirmeSunucusu {
 
   Timer? _kapatZaman;
 
-  void _bitir(EslestirmeDurum d) {
-    if (_durum.bitti) return;
+  /// Birleştirme sürerken (isleniyor) yalnız birleştirmenin kendi sonucu [islem] oturumu bitirir;
+  /// süre, istek sayısı ya da hata sınırı DB işlemini "değişmedi" diye yanlış etiketlemesin.
+  void _bitir(EslestirmeDurum d, {bool islem = false}) {
+    if (_durum.bitti || (_durum == EslestirmeDurum.isleniyor && !islem)) return;
     _jeton = _oturum = _oturumIp = null;
     _qrZaman?.cancel();
     _genelZaman?.cancel();
@@ -285,7 +305,9 @@ class EslestirmeSunucusu {
 
   /// 'jeton' | 'oturum' | null
   String? _kimlik(HttpRequest r, String ip) {
-    final h = r.headers.value('authorization') ?? '';
+    // Yinelenen başlık value()'da istisna atıp IP hata sayacını atlatırdı: tek değer değilse kimliksiz.
+    final l = r.headers['authorization'];
+    final h = l != null && l.length == 1 ? l.single : '';
     if (!h.startsWith('Bearer ')) return null;
     final t = h.substring(7);
     final j = _jeton, o = _oturum;
@@ -429,6 +451,10 @@ class EslestirmeSunucusu {
   }
 
   Future<void> _session(HttpRequest r, String ip, Uint8List govde) async {
+    // Gövde okunurken başka bir istek jetonu yakmış ya da oturum ilerlemiş olabilir (sızan QR yarışı).
+    if (_jeton == null || _durum != EslestirmeDurum.bekliyor) {
+      return _hataYaz(r, WifiHata.yetkisiz);
+    }
     _jeton = null; // jeton tek kullanımlık: gövde geçerli olmasa da yanar
     final j = _json(govde);
     final c = j?['client'];
@@ -488,11 +514,11 @@ class EslestirmeSunucusu {
     } catch (_) {
       await _hataYaz(r, WifiHata.icHata);
       _olay('Birleştirme yapılamadı.');
-      return _bitir(EslestirmeDurum.hata);
+      return _bitir(EslestirmeDurum.hata, islem: true);
     }
     await _yaz(r, 200, {'result': 'merged', 'report': raporJson(sonuc!)});
     _olay('Birleştirildi.');
-    _bitir(EslestirmeDurum.tamam);
+    _bitir(EslestirmeDurum.tamam, islem: true);
   }
 
   Future<void> _son(HttpRequest r, Uint8List govde) async {

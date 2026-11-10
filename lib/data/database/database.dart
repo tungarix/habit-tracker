@@ -217,7 +217,9 @@ class AppDatabase extends _$AppDatabase {
         b.update(
           habits,
           HabitsCompanion(sortOrder: Value(i)),
-          where: (h) => h.id.equals(orderedIds[i]),
+          // Yalnız yeri değişen satır yazılır: değişmeyen UPDATE de tetikleyicide
+          // updated_at'i "şimdi" yapıp diğer cihazdaki daha yeni düzenlemeyi ezerdi.
+          where: (h) => h.id.equals(orderedIds[i]) & h.sortOrder.isNotValue(i),
         );
       }
     });

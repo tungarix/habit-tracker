@@ -338,10 +338,13 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            Text('Güncelleme', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            const GuncellemeBolumu(),
+            // Paket Windows zip'i: başka sistemlerde kurulamaz, bölüm hiç gösterilmez.
+            if (Platform.isWindows) ...[
+              const SizedBox(height: 24),
+              Text('Güncelleme', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              const GuncellemeBolumu(),
+            ],
             const SizedBox(height: 24),
             Text('Veri', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),

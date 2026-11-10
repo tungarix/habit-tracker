@@ -426,6 +426,83 @@ void main() {
     expect(k.sunucu.durum, EslestirmeDurum.bekliyor);
   });
 
+  test('yinelenen Authorization başlığı kimliksiz sayılır: IP hata sınırı işler, oturum ölmez', () async {
+    final k = await kur();
+    addTearDown(k.bitir);
+    const cift = 'GET /v1/state HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer a\r\n'
+        'Authorization: Bearer b\r\nConnection: close\r\n\r\n';
+    for (var i = 0; i < ipBasinaHata; i++) {
+      expect(await ham(k.q, cift), startsWith('HTTP/1.1 401'), reason: 'istek $i');
+    }
+    expect(await ham(k.q, cift), isEmpty, reason: 'beşten sonra yanıtsız kesilir');
+    expect(k.sunucu.durum, EslestirmeDurum.bekliyor);
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  test('sızan jeton yarışı: yarım gövdeli eski istek, jeton başkasına yandıktan sonra oturumu ezemez', () async {
+    final k = await kur();
+    addTearDown(k.bitir);
+    k.otomatik(o2: true);
+    final govde = jsonEncode({
+      ...oturumGovdesi,
+      'client': {'name': 'Saldirgan', 'app': 'habit-tracker-mobile', 'version': '0.3.0'},
+    });
+    final s = await SecureSocket.connect('127.0.0.1', k.q.port,
+        onBadCertificate: (c) => base64urlDolgusuz(sha256(c.der)) == k.q.parmakIzi);
+    final tampon = <int>[];
+    s.listen(tampon.addAll, onError: (_) {});
+    s.write('POST /v1/session HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer ${k.q.jeton}\r\n'
+        'Content-Type: application/json\r\nContent-Length: ${utf8.encode(govde).length}\r\n'
+        'Connection: close\r\n\r\n${govde.substring(0, 5)}');
+    await s.flush();
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+
+    final key = await k.oturumAc(); // meşru telefon jetonu yakar
+    expect(k.sunucu.durum, EslestirmeDurum.hazir);
+
+    s.write(govde.substring(5)); // saldırgan gövdeyi şimdi tamamlar
+    await s.flush();
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    s.destroy();
+    expect(utf8.decode(tampon, allowMalformed: true), startsWith('HTTP/1.1 401'));
+    expect(k.sunucu.istemci!.ad, 'Pixel 7');
+    expect(k.sunucu.durum, EslestirmeDurum.hazir);
+    expect((await istek(k.q, 'GET', '/v1/state', bearer: key)).kod, 200, reason: 'meşru anahtar geçerli kalır');
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  test('birleştirme sürerken genel süre dolsa da oturum sureDoldu olmaz, sonuç tamam', () async {
+    final tut = Completer<void>();
+    late Kur k;
+    k = await kur(
+      ayar: const EslestirmeAyar(
+        loopbackIzinli: true,
+        oturumEnFazla: Duration(milliseconds: 1500),
+      ),
+      uygula: (b) async {
+        await tut.future;
+        return importSyncBytes(k.dev.db, b);
+      },
+    );
+    addTearDown(k.bitir);
+    k.otomatik(o2: true, o4: true);
+    final key = await k.oturumAc();
+    final f = istek(k.q, 'POST', '/v1/state', bearer: key, govde: await telefonDosyasi());
+    await k.sunucu.durumlar.firstWhere((d) => d == EslestirmeDurum.isleniyor);
+    await Future<void>.delayed(const Duration(milliseconds: 2200)); // genel süre doldu
+    expect(k.sunucu.durum, EslestirmeDurum.isleniyor);
+    tut.complete();
+    expect((await f).kod, 200);
+    expect(await k.sunucu.bitti, EslestirmeDurum.tamam);
+    expect((await k.dev.db.getAllHabits()).length, 2);
+  }, timeout: const Timeout(Duration(seconds: 30)));
+
+  test('sunucu portu telefonun kabul ettiği aralıkta seçilir', () async {
+    for (var i = 0; i < 8; i++) {
+      final k = await kur();
+      addTearDown(k.bitir);
+      expect(k.q.port, inInclusiveRange(portEnAz, portEnCok));
+    }
+  });
+
   test('adres yoksa başlamaz', () async {
     final s = EslestirmeSunucusu(
       durumAl: () async => Uint8List(0),

@@ -23,6 +23,8 @@ String guncellemeHataMetni(String kod) => switch (kod) {
     'Uygulamanın klasörüne yazılamıyor (ör. Program Files). Yeni sürümü elle indir.',
   'disk_dolu' => 'Diskte yeterli yer yok.',
   'izin_yok' => 'Dosya izni ya da yedek sorunu nedeniyle devam edilemedi.',
+  'uygulayici_baslamadi' =>
+    'Güncelleyici başlatılamadı (antivirüs ya da izin engeli olabilir). Uygulama açık kaldı; tekrar dene ya da yeni sürümü elle indir.',
   'surum_dusuk' => 'Bu sürüm zaten kurulu olandan yeni değil.',
   'iptal' => 'İndirme iptal edildi.',
   _ => 'Güncelleme yapılamadı.',
@@ -96,11 +98,12 @@ class _GuncellemeBolumuState extends ConsumerState<GuncellemeBolumu> {
     setState(() => _asama = _Asama.kuruluyor);
     try {
       await (await ref.read(kurucuProvider.future)).kur(g);
-    } on GuncellemeHatasi catch (e) {
+    } on Object catch (e) {
+      // Uygulayıcı başlamazsa (antivirüs, SmartScreen, izin) ekran takılı kalmasın.
       if (mounted) {
         setState(() {
           _asama = _Asama.hazir;
-          _hata = e.kod;
+          _hata = e is GuncellemeHatasi ? e.kod : 'uygulayici_baslamadi';
         });
       }
     }

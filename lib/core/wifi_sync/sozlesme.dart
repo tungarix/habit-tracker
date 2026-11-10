@@ -25,6 +25,10 @@ const int adresEnFazla = 3;
 const int qrEnFazlaUzunluk = 400;
 const int adEnFazla = 40;
 
+/// Telefonun kabul ettiği QR port aralığı (Windows/Android geçici port aralığı).
+const int portEnAz = 49152;
+const int portEnCok = 65535;
+
 /// Hata kodu <-> HTTP durumu (A5). Gövde yalnız `{"error":"kod"}`.
 enum WifiHata {
   istekBozuk(400, 'istek_bozuk'),
@@ -149,7 +153,7 @@ class QrBaglanti {
     if (!RegExp(r'^[1-9]\d{0,3}$').hasMatch(v)) return null;
     if (!RegExp(r'^[1-9]\d{4}$').hasMatch(p)) return null;
     final port = int.parse(p);
-    if (port < 49152 || port > 65535) return null;
+    if (port < portEnAz || port > portEnCok) return null;
     if (!RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(f)) return null;
     if (!RegExp(r'^[0-9a-f]{32}$').hasMatch(t)) return null;
     if (!RegExp(r'^\d{1,12}$').hasMatch(e)) return null;

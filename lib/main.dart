@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,7 +47,7 @@ Future<void> main(List<String> args) async {
   runApp(
     UncontrolledProviderScope(
       container: container,
-      child: const AktenakApp(guncellemeAcilisi: true),
+      child: AktenakApp(guncellemeAcilisi: Platform.isWindows),
     ),
   );
   WidgetsBinding.instance.addPostFrameCallback((_) => tray.onFirstFrame());
