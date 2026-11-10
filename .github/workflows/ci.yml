@@ -15,6 +15,10 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
+          # Mobil uygulamayla (habit-tracker-mobil) aynı sürüm; ikisi birlikte
+          # güncellenir. Sabit olmasa "stable" kayar ve kopyalanan kod farklı
+          # derlenebilir.
+          flutter-version: "3.47.5"
           channel: stable
           cache: true
 

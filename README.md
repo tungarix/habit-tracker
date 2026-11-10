@@ -58,9 +58,15 @@ sekmesini kullanabilirsin.
 - **Ayarlar** (Yedek & Ayarlar): Windows başlangıcında otomatik açılma (kapalı başlar,
   isteğe bağlı; açıksa oturum açılışında pencere fırlamaz, uygulama tepside başlar) ve
   akşam hatırlatıcısı — seçtiğin saatte bekleyen alışkanlık varsa bir bildirim gösterir.
-- **Yedek**: tüm veri tek `.json` dosyası (format v4: alışkanlıklar + işaretlemeler +
-  mood + görevler + seanslar). v1/v2/v3 yedekler içe aktarılabilir. **Birleştir** veya
+- **Yedek**: tüm veri tek `.json` dosyası (format v5: alışkanlıklar + işaretlemeler +
+  mood + görevler + seanslar + senkron kimlikleri). v1–v4 yedekler içe aktarılabilir. **Birleştir** veya
   **Tamamen değiştir** seçenekleri.
+- **Telefonla senkron (taslak, yayımlanmadı)**: Ayarlar'da iki düğme, **Telefon için dışa
+  aktar** ve **Telefondan içe aktar**. Veri tek bir `.habitsync` dosyasıyla gidip gelir;
+  aynı kayıtta son değişiklik kazanır, silmeler de taşınır, aynı dosyayı iki kez içe
+  aktarmak hiçbir şeyi değiştirmez. Bu özellik **henüz bir sürümde yok** (1.4.0 adayı
+  olarak hazırlanıyor, yayımlanmadı); karşı taraf mobil uygulamadır. Biçim ve kurallar:
+  [docs/senkron.md](docs/senkron.md).
 - **Otomatik yedek**: her gün bir kez veri klasöründeki `yedekler/` altına tam JSON yedek
   alınır, son 14 gün saklanır (elle aldığın yedeklere dokunulmaz). Ayarlar'da veri
   klasörünün yolu görünür, **Klasörü aç** / **Yedekleri aç** ile açılır.
@@ -95,9 +101,10 @@ lib/
     tasks.dart         #   görev gruplama / sıralama / özet
     sessions.dart      #   odak süresi toplamları, süre biçimlendirme
   data/
-    database/          # drift tabloları + AppDatabase (+ .g.dart), schema v4
+    database/          # drift tabloları + AppDatabase (+ .g.dart), schema v5
     models/            # HabitTodayView
     repositories/      # habit_, task_, session_, backup_repository
+    sync/              # .habitsync dışa/içe aktarma (saf Dart), kurallar docs/senkron.md
     providers.dart     # Riverpod (tema, dayStartHour, todayProvider, özetler)
   features/            # ARAYÜZ — hesap yapmaz, core'u çağırır
     dashboard/ tasks/ home/ stats/ habits/ backup/
@@ -115,6 +122,10 @@ edilir. Gerekçe gerçek bir arıza: uygulama yükseltme sırasında kapanınca 
 ama sürüm numarası geri alındı; sonraki her açılış `duplicate column name` ile patladı ve
 veritabanı kalıcı olarak kilitlendi. `test/migration_test.dart` bu senaryoyu tutuyor.
 
+Şema v5 (taslak, yayımlanmadı) senkron için `uid`, `updated_at` ve silinenler tablosunu
+ekler; tetikleyiciler `lib/data/database/sync_schema.dart` içindedir. Taze kurulum ile
+yükseltilmiş kurulum aynı şemayı vermelidir: `test/migration_v5_test.dart` karşılaştırır.
+
 ### Gün sınırı (önemli)
 
 Bir izleme günü gece yarısında değil, **`day_start_hour`'da (varsayılan 04:00)** başlar.
@@ -128,8 +139,7 @@ Saat 01:35'te işaretlenen alışkanlık biten güne yazılır. Tüm tarih hesap
 - `kind='count'` — günlük `target`'a karşı sayı (ör. 10000 adım); `habit_entries.value`
   girilen miktarı tutar, hedefe ulaşınca gün ✓ sayılır.
 
-Testler: `flutter test` → **72 test** (71 geçer, 1 gerçek yedek dosyası olmayan makinelerde
-atlanır) — saf mantık (seri, istatistik, görev sıralama,
+Testler: `flutter test` — saf mantık (seri, istatistik, görev sıralama,
 odak toplamları), gün sınırı, `core/` saflığı, migration (gerçek veri + yarım kalmış
 yükseltme onarımı), panel düzeni üç kırılma noktasında, uçtan uca alışkanlık ekleme.
 

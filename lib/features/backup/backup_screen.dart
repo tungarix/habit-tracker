@@ -10,6 +10,9 @@ import 'package:intl/intl.dart';
 import '../../core/constants.dart';
 import '../../data/providers.dart';
 import '../../data/repositories/backup_repository.dart';
+import '../../data/sync/sync_export.dart';
+import '../../data/sync/sync_format.dart';
+import '../../data/sync/sync_import.dart';
 import '../../shared/desktop_integration.dart';
 
 /// Export / import the whole database as a single JSON file.
@@ -105,6 +108,63 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     }
   }
 
+  /// Writes the whole state to a `.habitsync` file for the phone.
+  Future<void> _syncExport() async {
+    setState(() => _busy = true);
+    try {
+      final text = await exportSync(ref.read(databaseProvider));
+      final path = await FilePicker.saveFile(
+        dialogTitle: 'Senkron dosyasını kaydet',
+        fileName: syncFileName(),
+        type: FileType.custom,
+        allowedExtensions: const [syncExtension],
+        bytes: Uint8List.fromList(utf8.encode(text)),
+      );
+      if (path == null) return; // cancelled
+      // Same as the backup export: the picker only returns the path here.
+      final file = File(path);
+      if (!await file.exists() || (await file.readAsString()) != text) {
+        await file.writeAsString(text);
+      }
+      _toast('Senkron dosyası kaydedildi:\n$path');
+    } catch (e) {
+      _toast('Dışa aktarım başarısız: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Merges a `.habitsync` file from the phone; shows what changed.
+  Future<void> _syncImport() async {
+    final result = await FilePicker.pickFiles(
+      dialogTitle: 'Senkron dosyası seç',
+      type: FileType.custom,
+      allowedExtensions: const [syncExtension],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final picked = result.files.single;
+    if (picked.size > syncMaxFileBytes) {
+      _toast('Dosya çok büyük (en çok ${syncMaxFileBytes ~/ (1024 * 1024)} MB).');
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      final bytes = picked.bytes ?? await File(picked.path!).readAsBytes();
+      final report = await importSyncBytes(ref.read(databaseProvider), bytes);
+      // The day-start hour may have come with the file.
+      ref.invalidate(dayStartHourProvider);
+      _toast(report.summary());
+    } on SyncException catch (e) {
+      _toast('${e.message} Hiçbir şey değişmedi.');
+    } catch (e) {
+      _toast('İçe aktarım başarısız: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<_ImportMode?> _askMergeOrReplace() {
     return showDialog<_ImportMode>(
       context: context,
@@ -174,6 +234,27 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               subtitle:
                   'Bir .json yedeğinden geri yükle (birleştir veya değiştir).',
               onTap: _busy ? null : _import,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Telefonla senkron: dosya dışa/içe aktar',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            _ActionCard(
+              icon: Icons.phone_android,
+              title: 'Telefon için dışa aktar',
+              subtitle: 'Tüm veriyi bir .habitsync dosyasına yaz, telefonda aç.',
+              onTap: _busy ? null : _syncExport,
+            ),
+            const SizedBox(height: 12),
+            _ActionCard(
+              icon: Icons.sync,
+              title: 'Telefondan içe aktar',
+              subtitle:
+                  'Telefonun .habitsync dosyasını bu verilerle birleştir. '
+                  'Aynı kayıtta son değişiklik kazanır.',
+              onTap: _busy ? null : _syncImport,
             ),
             const SizedBox(height: 24),
             Text('Sistem', style: Theme.of(context).textTheme.titleSmall),
