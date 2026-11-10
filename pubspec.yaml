@@ -46,6 +46,8 @@ dependencies:
   window_manager: ^0.5.2
   nativeapi: ^0.3.0
   screen_retriever: ^0.2.2
+  qr: 4.0.1
+  basic_utils: 5.8.2
 
 dev_dependencies:
   flutter_test:

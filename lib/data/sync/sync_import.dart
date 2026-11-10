@@ -21,6 +21,28 @@ Future<SyncReport> importSyncBytes(AppDatabase db, Uint8List bytes) async {
   return db.transaction(() => _Merge(db, file).run());
 }
 
+/// Thrown inside the preview transaction to roll it back; carries the report.
+class _PreviewRollback implements Exception {
+  _PreviewRollback(this.report);
+  final SyncReport report;
+}
+
+/// What [importSyncBytes] would do, without doing it: the same merge runs in a
+/// transaction that is always rolled back (tombstone rows included), so the
+/// counts come from the real code and the data stays as it was.
+Future<SyncReport> previewSyncBytes(AppDatabase db, Uint8List bytes) async {
+  final file = parseSync(bytes);
+  try {
+    await db.transaction<void>(() async {
+      final report = await _Merge(db, file).run();
+      throw _PreviewRollback(report);
+    });
+  } on _PreviewRollback catch (e) {
+    return e.report;
+  }
+  throw StateError('preview transaction did not roll back');
+}
+
 /// Same as [importSyncBytes] for text already in memory.
 Future<SyncReport> importSyncText(AppDatabase db, String text) =>
     importSyncBytes(db, Uint8List.fromList(utf8.encode(text)));
