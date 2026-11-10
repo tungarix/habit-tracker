@@ -46,6 +46,7 @@ dependencies:
   window_manager: ^0.5.2
   nativeapi: ^0.3.0
   screen_retriever: ^0.2.2
+  archive: 4.6.0
 
 dev_dependencies:
   flutter_test:
