@@ -2,13 +2,13 @@
 
 Eski sürümlerin notları GitHub Releases sayfasındadır.
 
-## 1.4.1 (hazırlanıyor, etiketlenmedi)
+## 1.4.1 (2026-11-11)
 
 - Yeni uygulama ve tepsi ikonu (yeni logo). Kaynak `assets/marka/habit-tracker-logo.png`;
   `python tool/ikon_uret.py` ikonları yeniden üretir. Tepsi ikonunda küçük boyutlarda
   (16-32 px) glow kısıldı, çizgiler kalınlaştırıldı.
 
-## 1.4.0 (hazırlanıyor, etiketlenmedi)
+## 1.4.0 (2026-11-10)
 
 - **Telefonla senkron**: iki yönlü, son değişiklik kazanır, silmeler taşınır, tekrar
   uygulamak güvenlidir. İki yol: `.habitsync` dosyası (kurallar `docs/senkron.md`) ve
