@@ -158,6 +158,59 @@ void main() {
     expect(kapatDugme.onPressed, isNotNull, reason: 'kullanıcı yeniden deneyebilmeli');
   });
 
+  testWidgets('indirme klasörü hazırlanamazsa ekran takılmaz, hata gösterilir', (
+    tester,
+  ) async {
+    final gh = await tester.runAsync(() => SahteGithub(zipUret()).baslat());
+    final tmp = Directory.systemTemp.createTempSync('bolum_test4');
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(() async {
+      await gh!.kapat();
+      await db.close();
+      tmp.deleteSync(recursive: true);
+    });
+    // Klasör yerine aynı adlı dosya: create() ham FileSystemException atar.
+    File(p.join(tmp.path, 'g')).writeAsStringSync('dosya');
+    final g = Guncelleyici(
+      ayarlar: (await tester.runAsync(() => GuncellemeAyarlari.yukle(db)))!,
+      klasor: Directory(p.join(tmp.path, 'g')),
+      surum: '1.3.3',
+      ag: Ag(surum: '1.3.3', apiTaban: gh!.taban, ekSunucular: {'127.0.0.1'}),
+      acikAnahtar: gh.acikAnahtar,
+    );
+    final kurucu = Kurucu(
+      kurulumKlasoru: tmp,
+      sonucDosyasi: File(p.join(tmp.path, 's.json')),
+      yedekAl: () async {},
+      uygulayiciyiBaslat: (_, _) async {},
+      kapat: () async {},
+    );
+    tester.view.physicalSize = const Size(1000, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          guncelleyiciProvider.overrideWith((ref) async => g),
+          kurucuProvider.overrideWith((ref) async => kurucu),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(child: GuncellemeBolumu()),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Şimdi denetle'));
+    await bekle(tester, find.text('İndir ve doğrula'));
+    await tester.tap(find.text('İndir ve doğrula'));
+    await bekle(tester, find.textContaining('(izin_yok)'));
+
+    expect(find.textContaining('(izin_yok)'), findsOneWidget);
+    expect(find.text('İndir ve doğrula'), findsOneWidget, reason: 'yeniden denenebilmeli');
+  });
+
   testWidgets('doğrulama hatası Türkçe metin + kodla gösterilir', (
     tester,
   ) async {

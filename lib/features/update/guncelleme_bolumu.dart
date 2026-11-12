@@ -83,11 +83,13 @@ class _GuncellemeBolumuState extends ConsumerState<GuncellemeBolumu> {
         },
       );
       if (mounted) setState(() => _asama = _Asama.hazir);
-    } on GuncellemeHatasi catch (e) {
+    } on Object catch (e) {
+      // hazirla() ham FileSystemException da sızdırabilir (antivirüs kilidi,
+      // dolu disk); yakalanmazsa ekran 'indiriyor'da takılı kalırdı.
       if (mounted) {
         setState(() {
           _asama = _Asama.bosta;
-          _hata = e.kod;
+          _hata = e is GuncellemeHatasi ? e.kod : 'izin_yok';
         });
       }
     }

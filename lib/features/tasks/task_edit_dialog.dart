@@ -79,10 +79,13 @@ class _TaskEditDialogState extends ConsumerState<TaskEditDialog> {
 
   Future<void> _pickDate() async {
     final today = ref.read(todayProvider);
+    final due = _dueDay;
+    final oldest = DateTime(today.year - 1);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _dueDay ?? today,
-      firstDate: DateTime(today.year - 1),
+      initialDate: due ?? today,
+      // An overdue task older than the window must still open the picker.
+      firstDate: due != null && due.isBefore(oldest) ? due : oldest,
       lastDate: DateTime(today.year + 3),
       locale: const Locale('tr'),
     );

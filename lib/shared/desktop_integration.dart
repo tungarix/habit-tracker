@@ -161,7 +161,17 @@ class TrayService with WindowListener {
       // Before runApp, so before the first frame — the window appears in
       // place instead of jumping there.
       await _restorePlacement();
-      await windowManager.setPreventClose(true);
+      // The first un-maximised bounds, when nothing was saved yet: without
+      // them a first-ever maximise could not be remembered (see _savePlacement).
+      if (_normalBounds == null) {
+        await _safely(() async {
+          final b = await windowManager.getBounds();
+          if (b.width >= WindowPlacement.minWidth &&
+              b.height >= WindowPlacement.minHeight) {
+            _normalBounds = b;
+          }
+        });
+      }
       windowManager.addListener(this);
 
       if (!native.TrayManager.instance.isSupported()) return;
@@ -186,6 +196,9 @@ class TrayService with WindowListener {
         (_, next) => _refreshTray(next.value),
         fireImmediately: true,
       );
+      // Last, and only with a tray icon: with prevent-close on but no icon the
+      // X button would hide the window with no way to bring it back.
+      await windowManager.setPreventClose(true);
     } catch (_) {
       // Nice-to-have, not load-bearing: e.g. no libappindicator on some
       // Linux desktops. The app has to run fine without a tray icon.
@@ -445,6 +458,10 @@ class TrayService with WindowListener {
   /// Tray "Aç" / icon click. Also applies a maximise deferred by a
   /// `--tray` start, which never showed the window until now.
   Future<void> _showWindow() async {
+    // show() alone leaves a minimised window minimised.
+    await _safely(() async {
+      if (await windowManager.isMinimized()) await windowManager.restore();
+    });
     await _safely(windowManager.show);
     if (_pendingMaximize) {
       _pendingMaximize = false;

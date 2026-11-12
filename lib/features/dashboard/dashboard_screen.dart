@@ -279,7 +279,8 @@ class _TodayRow extends ConsumerWidget {
       opacity: dimmed ? 0.55 : 1,
       child: Semantics(
         button: true,
-        label: '${habit.name}, ${view.status?.name ?? 'işaretlenmedi'}',
+        label: '${habit.name}, ${statusLabel(view.status)}'
+            '${isCount ? ', $value / ${habit.target}' : ''}',
         child: Material(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(10),

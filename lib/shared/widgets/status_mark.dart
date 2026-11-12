@@ -31,6 +31,20 @@ IconData? statusIcon(EntryStatus? status) {
   }
 }
 
+/// Spoken form of a day mark, for screen-reader labels.
+String statusLabel(EntryStatus? status) {
+  switch (status) {
+    case EntryStatus.done:
+      return 'yapıldı';
+    case EntryStatus.missed:
+      return 'yapılmadı';
+    case EntryStatus.skipped:
+      return 'atlandı';
+    case null:
+      return 'işaretlenmedi';
+  }
+}
+
 /// Round tri-state mark used on the Today screen. Pops (scale) when the
 /// status changes for a light bit of tactile feedback.
 class StatusMark extends StatelessWidget {

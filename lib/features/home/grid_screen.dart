@@ -38,7 +38,8 @@ class _GridScreenState extends ConsumerState<GridScreen> {
   static const double _headerH = 44;
   static const double _moodH = 120;
 
-  DateTime _month = firstOfMonth(today());
+  // The user's tracking day, not today()'s default day start.
+  late DateTime _month = firstOfMonth(ref.read(todayProvider));
 
   void _shiftMonth(int delta) {
     setState(() => _month = DateTime(_month.year, _month.month + delta, 1));
@@ -334,34 +335,38 @@ class _GridCell extends ConsumerWidget {
 
     // The InkWell spans the whole 44px cell (touch target); the coloured
     // box inside is inset 3px for the paper-grid look.
-    return SizedBox(
-      width: cellW,
-      height: rowH,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: tappable
-              ? () => markHabit(
-                    context,
-                    ref,
-                    habit,
-                    day,
-                    currentValue:
-                        ref.read(valuesByHabitProvider)[habit.id]?[dateStr] ?? 0,
-                  )
-              : null,
-          child: Padding(
-            padding: const EdgeInsets.all(3),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              decoration: BoxDecoration(
-                color: fill,
-                borderRadius: BorderRadius.circular(8),
+    return Semantics(
+      button: tappable,
+      label: '${habit.name}, $dateStr, ${statusLabel(status)}',
+      child: SizedBox(
+        width: cellW,
+        height: rowH,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: tappable
+                ? () => markHabit(
+                      context,
+                      ref,
+                      habit,
+                      day,
+                      currentValue:
+                          ref.read(valuesByHabitProvider)[habit.id]?[dateStr] ?? 0,
+                    )
+                : null,
+            child: Padding(
+              padding: const EdgeInsets.all(3),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                decoration: BoxDecoration(
+                  color: fill,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: icon == null
+                    ? null
+                    : Icon(icon, size: 18, color: glyphColor),
               ),
-              child: icon == null
-                  ? null
-                  : Icon(icon, size: 18, color: glyphColor),
             ),
           ),
         ),
