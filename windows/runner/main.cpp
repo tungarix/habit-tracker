@@ -7,6 +7,26 @@
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  // Tek örnek: ikinci başlatma (örn. uygulama tepside gizliyken kısayola
+  // tıklamak) yeni süreç, ikinci DB bağlantısı ve ikinci tepsi simgesi açmaz;
+  // varsa mevcut pencereyi öne getirir. Güncelleme uygulayıcısı aynı exe'dir ve
+  // eski süreç hâlâ açıkken başlar, bu yüzden denetimden muaftır (bayrak
+  // lib/data/update/uygula.dart'taki guncelleBayragi ile aynı olmalı).
+  if (wcsstr(GetCommandLineW(), L"--guncelle-uygula=1") == nullptr) {
+    // Tutamaç süreç bitene kadar bilerek açık bırakılır.
+    HANDLE single_instance =
+        ::CreateMutexW(nullptr, TRUE, L"Local\\Aktenak.HabitTracker.TekOrnek");
+    if (single_instance != nullptr && ::GetLastError() == ERROR_ALREADY_EXISTS) {
+      HWND existing = ::FindWindowW(L"FLUTTER_RUNNER_WIN32_WINDOW",
+                                    L"Aktenak Habit Tracker");
+      if (existing != nullptr) {
+        ::ShowWindow(existing, ::IsIconic(existing) ? SW_RESTORE : SW_SHOW);
+        ::SetForegroundWindow(existing);
+      }
+      return EXIT_SUCCESS;
+    }
+  }
+
   // Attach to console when present (e.g., 'flutter run') or create a
   // new console when running with a debugger.
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
