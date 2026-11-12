@@ -13,6 +13,8 @@ import '../core/enums.dart';
 import '../core/window_placement.dart';
 import '../data/models/habit_today_view.dart';
 import '../data/providers.dart';
+import '../features/dashboard/widgets/focus_card.dart';
+import 'windows_bildirim.dart';
 
 const _appId = 'com.aktenak.habit_tracker';
 const _appDisplayName = 'Aktenak Habit Tracker';
@@ -131,6 +133,7 @@ class TrayService with WindowListener {
   bool _trayReady = false;
 
   bool _notificationsReady = false;
+  bool _nativeNotifications = false;
   Timer? _reminderTimer;
   String? _lastReminderedDate;
 
@@ -207,8 +210,10 @@ class TrayService with WindowListener {
 
   Future<void> _initNotifications() async {
     try {
-      if (!native.NotificationManager.instance.isSupported()) return;
-      if (!native.NotificationManager.instance.initialize()) return;
+      final nm = native.NotificationManager.instance;
+      _nativeNotifications = nm.isSupported() && nm.initialize();
+      // Windows'ta nativeapi bildirimi yok (WinUI3 derlemesi kapalı): toast yedeği.
+      if (!_nativeNotifications && !Platform.isWindows) return;
       _notificationsReady = true;
 
       // Restored so a same-day restart (e.g. via tray Çıkış + reopen)
@@ -228,7 +233,7 @@ class TrayService with WindowListener {
     }
   }
 
-  void _maybeRemind() {
+  Future<void> _maybeRemind() async {
     if (!_notificationsReady) return;
     final hour = _container.read(reminderHourProvider);
     if (hour == null || DateTime.now().hour < hour) return;
@@ -241,12 +246,16 @@ class TrayService with WindowListener {
     final pending = views.where((v) => v.scheduledToday && !v.doneToday).length;
     if (pending == 0) return;
 
-    final shown = native.NotificationManager.instance.show(
-      'Aktenak',
-      '$pending alışkanlık bugün için hâlâ bekliyor.',
-      'evening-reminder-$todayStr',
-      '',
-    );
+    const title = 'Aktenak';
+    final message = '$pending alışkanlık bugün için hâlâ bekliyor.';
+    final shown = _nativeNotifications
+        ? native.NotificationManager.instance.show(
+            title,
+            message,
+            hatirlaticiEtiketi(todayStr),
+            '',
+          )
+        : await windowsToastGoster(title, message);
     if (shown) {
       _lastReminderedDate = todayStr;
       _container
@@ -337,6 +346,10 @@ class TrayService with WindowListener {
   /// The one real exit: tray "Çıkış" and the updater both end here
   /// (no `exit(0)` — the window must close the normal way).
   Future<void> quit() async {
+    // Çalışan odak seansı (varsa) kaydedilir; yoksa yarım kalan süre kaybolur.
+    try {
+      await FocusCard.saveRunningOnQuit?.call();
+    } catch (_) {}
     await _savePlacement();
     await windowManager.setPreventClose(false);
     await windowManager.destroy();

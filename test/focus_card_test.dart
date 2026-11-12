@@ -1,4 +1,8 @@
 import 'package:aktenak_habit_tracker/features/dashboard/widgets/focus_card.dart';
+import 'package:aktenak_habit_tracker/core/sessions.dart';
+import 'package:aktenak_habit_tracker/data/providers.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -17,5 +21,28 @@ void main() {
   test('saat geri alınırsa süre negatif olmaz', () {
     final now = start.subtract(const Duration(hours: 1));
     expect(focusElapsedSeconds(start, now, 25 * 60), 0);
+  });
+
+  testWidgets('çalışan seans varken tepsi Çıkış kancası seansı durdurur', (tester) async {
+    tester.view.physicalSize = const Size(1000, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        focusSummaryProvider.overrideWithValue(summariseFocus(const [], DateTime.now())),
+      ],
+      child: const MaterialApp(home: Scaffold(body: FocusCard())),
+    ));
+    expect(FocusCard.saveRunningOnQuit, isNull);
+
+    await tester.tap(find.byType(FilledButton));
+    await tester.pump();
+    expect(find.text('Bitir'), findsOneWidget);
+    expect(FocusCard.saveRunningOnQuit, isNotNull);
+
+    await FocusCard.saveRunningOnQuit!();
+    await tester.pump();
+    expect(find.text('Bitir'), findsNothing);
+    expect(FocusCard.saveRunningOnQuit, isNull);
   });
 }

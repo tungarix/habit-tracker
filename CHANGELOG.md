@@ -2,6 +2,13 @@
 
 Eski sürümlerin notları GitHub Releases sayfasındadır.
 
+## Yayınlanmamış
+
+- Windows'ta akşam hatırlatıcısı çalışıyor: nativeapi bildirimi bu yapıda kapalıydı (WinUI3),
+  hatırlatıcı artık Windows toast'ı ile gösterilir.
+- Görevde Sil onay ister; tepsiden Çıkış çalışan odak seansını kaydeder; alışkanlığın hedefi
+  düşünce yeni hedefe ulaşmış eski ✗ günler ✓ olur.
+
 ## 1.4.1 (2026-11-11)
 
 - Yeni uygulama ve tepsi ikonu (yeni logo). Kaynak `assets/marka/habit-tracker-logo.png`;

@@ -189,6 +189,25 @@ class _TaskEditDialogState extends ConsumerState<TaskEditDialog> {
         if (_isEdit)
           TextButton(
             onPressed: () async {
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Görev silinsin mi?'),
+                  content: const Text('Görev kalıcı olarak silinir. Bu geri alınamaz.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('İptal')),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: Theme.of(ctx).colorScheme.error),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Sil'),
+                    ),
+                  ],
+                ),
+              );
+              if (ok != true) return;
               await ref.read(taskRepositoryProvider).delete(widget.existing!.id);
               if (context.mounted) Navigator.of(context).pop();
             },

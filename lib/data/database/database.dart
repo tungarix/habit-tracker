@@ -198,7 +198,21 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> insertHabit(HabitsCompanion companion) => into(habits).insert(companion);
 
-  Future<bool> updateHabit(Habit habit) => update(habits).replace(habit);
+  Future<bool> updateHabit(Habit habit) => transaction(() async {
+        final ok = await update(habits).replace(habit);
+        // Hedef düşünce yeni hedefe ulaşmış eski ✗ günler ✓ olur (setEntryAmount ile aynı
+        // kural). Yükselen hedef geçmişi bozmaz: biten gün ✗'e çevrilip seri kırılmaz.
+        if (habit.kind == HabitKind.count.storageName) {
+          await (update(habitEntries)
+                ..where((e) =>
+                    e.habitId.equals(habit.id) &
+                    e.status.equalsValue(EntryStatus.missed) &
+                    e.value.isBiggerThanValue(0) &
+                    e.value.isBiggerOrEqualValue(habit.target)))
+              .write(const HabitEntriesCompanion(status: Value(EntryStatus.done)));
+        }
+        return ok;
+      });
 
   Future<void> archiveHabit(int id, DateTime when) => (update(habits)
         ..where((h) => h.id.equals(id)))
