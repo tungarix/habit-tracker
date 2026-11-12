@@ -49,8 +49,8 @@ Future<bool> windowsToastGoster(String baslik, String mesaj) async {
     final r = await Process.run('powershell.exe', [
       '-NoProfile',
       '-NonInteractive',
-      '-ExecutionPolicy',
-      'Bypass',
+      '-WindowStyle',
+      'Hidden',
       '-EncodedCommand',
       base64.encode(utf16),
     ]);

@@ -2,12 +2,24 @@
 
 Eski sürümlerin notları GitHub Releases sayfasındadır.
 
-## Yayınlanmamış
+## 1.4.2 (2026-11-12)
 
+Kod incelemesi turu: yeni özellik yok, hata düzeltmeleri.
+
+- Seri: sayılabilir alışkanlıkta bugün girilen kısmi miktar seriyi artık sıfırlamıyor.
+- Panel: odak sayacı pencere daralınca kaybolmuyor, süre duvar saatiyle ölçülüyor ve plandan
+  uzun yazılmıyor; hafta yüzdesi atlanan günleri saymıyor.
 - Windows'ta akşam hatırlatıcısı çalışıyor: nativeapi bildirimi bu yapıda kapalıydı (WinUI3),
-  hatırlatıcı artık Windows toast'ı ile gösterilir.
+  hatırlatıcı artık Windows toast'ı ile gösterilir (`lib/shared/windows_bildirim.dart`).
+- Uygulama ikinci kez açılınca yeni kopya başlamaz, açık pencere öne gelir.
 - Görevde Sil onay ister; tepsiden Çıkış çalışan odak seansını kaydeder; alışkanlığın hedefi
   düşünce yeni hedefe ulaşmış eski ✗ günler ✓ olur.
+- Ad, başlık, açıklama ve miktar alanları senkron sınırlarıyla aynı sınırlara bağlandı.
+- Yedek: bozuk tarihli JSON yedek reddedilir; otomatik yedek yeni yazdığı dosyayı budamaz.
+- Aynı hücreye iki hızlı tıklama hata vermez; ısı şeridinde ✓ günü her zaman dolu görünür.
+- Wi-Fi eşitleme ve güncelleme ekranı beklenmedik hatada takılı kalmaz.
+- Tepsi yoksa X düğmesi pencereyi erişilmez bırakmaz; simge durumundaki pencere tepsiden açılır.
+- Ekran okuyucu: bugün satırı ve ızgara hücreleri durumu okur.
 
 ## 1.4.1 (2026-11-11)
 
