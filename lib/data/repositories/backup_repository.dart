@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../core/constants.dart';
+import '../../core/date_utils.dart';
 import '../../core/enums.dart';
 import '../database/database.dart';
 import '../sync/sync_format.dart';
@@ -224,11 +225,16 @@ class BackupRepository {
       _checkText(h['name'], 1, syncMaxHabitName, 'alışkanlık adı');
       _checkText(h['description'], 0, syncMaxTextLength, 'açıklama');
     }
+    for (final e in entryMaps) {
+      _checkDay(e['date'], 'kayıt tarihi', nullable: false);
+    }
     for (final t in taskMaps) {
       _checkText(t['title'], 1, syncMaxTaskTitle, 'görev başlığı');
+      _checkDay(t['dueDay'], 'görev bitiş günü', nullable: true);
     }
     for (final m in moodMaps) {
       _checkText(m['note'], 0, syncMaxTextLength, 'not');
+      _checkDay(m['date'], 'ruh hali tarihi', nullable: false);
     }
 
     var importedEntries = 0;
@@ -631,6 +637,20 @@ class _KnownRow {
 
 /// Backup text fields: null is fine, anything else must be a string of the allowed length
 /// (the tables would reject a longer name with a raw SQLite error).
+/// A stored day must be a real, canonical `YYYY-MM-DD`: tasks.dart and
+/// stats.dart parse it with [parseYmd] on every redraw and would throw.
+void _checkDay(Object? v, String what, {required bool nullable}) {
+  if (nullable && (v == null || v == '')) return; // tasks.dart treats '' as no date
+  if (v is String) {
+    try {
+      if (formatYmd(parseYmd(v)) == v) return;
+    } on FormatException {
+      // falls through to the shared error below
+    }
+  }
+  throw FormatException('Yedek dosyası bozuk: $what YYYY-AA-GG olmalı. Hiçbir şey değişmedi.');
+}
+
 void _checkText(Object? v, int min, int max, String what) {
   if (v == null && min == 0) return;
   if (v is! String || v.length < min || v.length > max) {

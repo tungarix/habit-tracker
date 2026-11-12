@@ -500,6 +500,11 @@ class EslestirmeSunucusu {
     } on SyncException {
       _stateAlindi = false;
       return _hataYaz(r, WifiHata.senkronBozuk);
+    } catch (_) {
+      // e.g. a database error: let the phone retry instead of "mesgul" until
+      // the session times out.
+      _stateAlindi = false;
+      return _hataYaz(r, WifiHata.icHata);
     }
     if (_durum != EslestirmeDurum.hazir) return _hataYaz(r, WifiHata.iptal);
     ozet = onizleme;

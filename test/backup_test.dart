@@ -126,12 +126,13 @@ String _file({
   List<Map<String, dynamic>> entries = const [],
   List<Map<String, dynamic>> tasks = const [],
   List<Map<String, dynamic>> sessions = const [],
+  List<Map<String, dynamic>> moods = const [],
 }) => jsonEncode({
   'format': AppConstants.backupFormat,
   'version': version,
   'habits': habits,
   'entries': entries,
-  'moods': const [],
+  'moods': moods,
   'tasks': tasks,
   'sessions': sessions,
 });
@@ -537,6 +538,25 @@ void main() {
         jsonEncode({'format': AppConstants.backupFormat, 'version': 5, 'habits': [1, 2]}),
         contains('beklenen türde değil'),
       );
+    });
+
+    test('gerçek olmayan gün: kayıt, ruh hali ve görev bitiş günü reddedilir', () async {
+      for (final bad in ['abc', '2026-13-45', '2026-02-30', '2026-3-1', '']) {
+        await reddedilir(
+          _file(habits: [_fileHabit(1, 'Spor', _t2)], entries: [_fileEntry(1, bad)]),
+          contains('kayıt tarihi'),
+        );
+        await reddedilir(
+          _file(moods: [
+            {'date': bad, 'mood': 3},
+          ]),
+          contains('ruh hali tarihi'),
+        );
+      }
+      for (final bad in ['abc', '2026-13-45', 7]) {
+        final t = _fileTask(1, 'x', _t2)..['dueDay'] = bad;
+        await reddedilir(_file(tasks: [t]), contains('görev bitiş günü'));
+      }
     });
 
     test('çok iç içe JSON ve bozuk JSON', () async {

@@ -33,7 +33,7 @@ class AutoBackup {
     await temp.writeAsString(await repo.exportJson(), flush: true);
     await temp.rename(target.path);
 
-    await _prune();
+    await _prune(target);
     return target;
   }
 
@@ -44,9 +44,14 @@ class AutoBackup {
     return files.first.lastModified();
   }
 
-  Future<void> _prune() async {
-    final files = await _autoFiles();
-    for (final f in files.skip(keep)) {
+  /// [fresh] yeni yazılan dosyadır ve asla silinmez: saat geri alınmışsa adı
+  /// "eski" sıralanır, yoksa yazıldığı anda budanırdı.
+  Future<void> _prune(File fresh) async {
+    final others = [
+      for (final f in await _autoFiles())
+        if (p.basename(f.path) != p.basename(fresh.path)) f,
+    ];
+    for (final f in others.skip(keep > 0 ? keep - 1 : 0)) {
       await f.delete();
     }
   }

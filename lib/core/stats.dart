@@ -128,7 +128,7 @@ List<HeatCell> habitHeatmap(
 class HeatPoint {
   final HeatCell cell;
 
-  /// 0..1. Always 1 for a completed bool habit.
+  /// 0..1. Always 1 for a ✓ day.
   final double intensity;
 
   const HeatPoint(this.cell, this.intensity);
@@ -159,10 +159,9 @@ List<HeatPoint> habitHeatPoints(
       HeatPoint(
         cells[i],
         switch (cells[i]) {
-          HeatCell.done => isCount
-              ? ((values[formatYmd(days[i])] ?? habit.target) / habit.target)
-                  .clamp(0.0, 1.0)
-              : 1.0,
+          // ✓ is a full day: an edit of kind/target does not rewrite old
+          // rows, so a stored value (1 from a bool habit) can be far below it.
+          HeatCell.done => 1.0,
           // A count habit that fell short still shows how far it got.
           HeatCell.missed when isCount =>
             ((values[formatYmd(days[i])] ?? 0) / habit.target).clamp(0.0, 1.0),

@@ -298,33 +298,34 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// Advances the (habit, date) cell through boş → ✓ → ✗ → – → boş and
-  /// returns the new status. One read + one write.
-  Future<EntryStatus?> cycleEntry(int habitId, String date) async {
-    final existing = await getEntry(habitId, date);
-    final next = nextStatus(existing?.status);
-    if (next == null) {
-      if (existing != null) {
-        await (delete(habitEntries)..where((e) => e.id.equals(existing.id))).go();
-      }
-    } else if (existing == null) {
-      await into(habitEntries).insert(
-        HabitEntriesCompanion.insert(
-          habitId: habitId,
-          date: date,
-          status: next,
-          value: Value(next == EntryStatus.done ? 1 : 0),
-        ),
-      );
-    } else {
-      await (update(habitEntries)..where((e) => e.id.equals(existing.id))).write(
-        HabitEntriesCompanion(
-          status: Value(next),
-          value: Value(next == EntryStatus.done ? 1 : 0),
-        ),
-      );
-    }
-    return next;
-  }
+  /// returns the new status. One read + one write, in a transaction so two
+  /// quick taps on the same cell advance twice instead of both inserting.
+  Future<EntryStatus?> cycleEntry(int habitId, String date) => transaction(() async {
+        final existing = await getEntry(habitId, date);
+        final next = nextStatus(existing?.status);
+        if (next == null) {
+          if (existing != null) {
+            await (delete(habitEntries)..where((e) => e.id.equals(existing.id))).go();
+          }
+        } else if (existing == null) {
+          await into(habitEntries).insert(
+            HabitEntriesCompanion.insert(
+              habitId: habitId,
+              date: date,
+              status: next,
+              value: Value(next == EntryStatus.done ? 1 : 0),
+            ),
+          );
+        } else {
+          await (update(habitEntries)..where((e) => e.id.equals(existing.id))).write(
+            HabitEntriesCompanion(
+              status: Value(next),
+              value: Value(next == EntryStatus.done ? 1 : 0),
+            ),
+          );
+        }
+        return next;
+      });
 
   // ---------------------------------------------------------------------------
   // Moods

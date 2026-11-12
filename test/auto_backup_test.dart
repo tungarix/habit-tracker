@@ -72,6 +72,22 @@ void main() {
     ]);
   });
 
+  test('saat geri alınmışsa yeni yedek budanmaz, eski adlılardan biri silinir', () async {
+    final b = backup(keep: 3);
+    for (var day = 20; day <= 22; day++) {
+      await b.runIfDue(DateTime(2027, 1, day)); // saat yanlışlıkla ileride
+    }
+
+    final file = await b.runIfDue(DateTime(2026, 10, 8));
+
+    expect(file!.existsSync(), isTrue);
+    expect(names(), [
+      'aktenak-auto-20261008.json',
+      'aktenak-auto-20270121.json',
+      'aktenak-auto-20270122.json',
+    ]);
+  });
+
   test('budama elle alınan yedeklere ve başka dosyalara dokunmaz', () async {
     File(
       p.join(dir.path, 'aktenak-backup-20260101-1200.json'),

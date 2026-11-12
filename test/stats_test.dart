@@ -137,6 +137,27 @@ void main() {
     });
   });
 
+  group('habitHeatPoints', () {
+    test('a ✓ day is full even when a later kind/target edit leaves value=1', () {
+      // Bool habit ticked (value 1), then turned into a 10 000-step habit.
+      final habit = testHabit(
+        id: 1,
+        createdAt: DateTime(2026, 6, 25),
+        kind: 'count',
+        target: 10000,
+      );
+      final points = habitHeatPoints(
+        habit,
+        statusMap(done: [DateTime(2026, 6, 26)]),
+        {'2026-06-26': 1},
+        DateTime(2026, 6, 30),
+        6,
+      );
+      expect(points[1].cell, HeatCell.done);
+      expect(points[1].intensity, 1.0);
+    });
+  });
+
   group('pearson', () {
     test('is 1 for a perfectly increasing relationship', () {
       expect(pearson([1, 2, 3, 4], [2, 4, 6, 8]), closeTo(1.0, 1e-9));

@@ -48,13 +48,14 @@ Future<Kur> kur({
   EslestirmeAyar? ayar,
   Future<SyncReport> Function(Uint8List)? uygula,
   Future<void> Function()? yedek,
+  Future<SyncReport> Function(Uint8List)? onizle,
 }) async {
   final dev = Dev('pc');
   await dev.habit('Yürüyüş', stamp: 1);
   late Kur k;
   final s = EslestirmeSunucusu(
     durumAl: () async => Uint8List.fromList(utf8.encode(await exportSync(dev.db, deviceName: 'pc'))),
-    onizle: (b) => previewSyncBytes(dev.db, b),
+    onizle: onizle ?? (b) => previewSyncBytes(dev.db, b),
     uygula: uygula ?? (b) => importSyncBytes(dev.db, b),
     yedekAl: () async {
       k.yedekSayisi++;
@@ -342,6 +343,24 @@ void main() {
     expect(k.sunucu.durum, EslestirmeDurum.hazir);
     final iyi = await istek(k.q, 'POST', '/v1/state', bearer: key, govde: await telefonDosyasi());
     expect(iyi.kod, 200);
+  });
+
+  test('önizleme beklenmedik hata verirse ic_hata, telefon yeniden deneyebilir', () async {
+    var cagri = 0;
+    late Kur k;
+    k = await kur(
+      onizle: (b) => ++cagri == 1 ? throw StateError('db') : previewSyncBytes(k.dev.db, b),
+    );
+    addTearDown(k.bitir);
+    k.otomatik(o2: true, o4: true);
+    final key = await k.oturumAc();
+    final govde = await telefonDosyasi();
+    final r = await istek(k.q, 'POST', '/v1/state', bearer: key, govde: govde);
+    expect(r.kod, 500);
+    expect(r.hata, 'ic_hata');
+    expect(k.sunucu.durum, EslestirmeDurum.hazir);
+    final tekrar = await istek(k.q, 'POST', '/v1/state', bearer: key, govde: govde);
+    expect(tekrar.kod, 200, reason: tekrar.govde);
   });
 
   test('daha yeni senkron sürümü: senkron_surumu', () async {
