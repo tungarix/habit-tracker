@@ -46,7 +46,10 @@ class HabitStats {
 /// Rules:
 /// - Only scheduled days count. Unscheduled days are ignored entirely.
 /// - Skipped (–) days are neutral: they neither extend nor break a streak.
-/// - An explicit missed (✗) breaks the streak — today included.
+/// - An explicit missed (✗) breaks the streak — today included. Exception: a
+///   count habit's ✗ is only ever a below-target amount (see
+///   `setEntryAmount`), so today's ✗ is progress in flight and counts as
+///   not yet marked; it breaks the streak once the day is past.
 /// - An untracked past scheduled day breaks the streak; today being untracked
 ///   *yet* does not (grace).
 ///
@@ -61,6 +64,10 @@ StreakInfo computeStreaks(
 }) {
   final start = dayOf(habit.createdAt, dayStartHour: dayStartHour);
   if (start.isAfter(todayDate)) return StreakInfo.empty;
+  final isCount = habit.kind == HabitKind.count.storageName && habit.target > 1;
+  // Today's untracked mark (or a count habit's partial amount) is still open.
+  bool openToday(EntryStatus? s) =>
+      s == null || (isCount && s == EntryStatus.missed);
 
   // Longest: walk forward from creation.
   int longest = 0;
@@ -72,7 +79,7 @@ StreakInfo computeStreaks(
     if (status == EntryStatus.done) {
       run++;
       if (run > longest) longest = run;
-    } else if (d == todayDate && status == null) {
+    } else if (d == todayDate && openToday(status)) {
       // Today untracked: grace, the run is still alive (but not extended).
     } else {
       run = 0;
@@ -89,7 +96,7 @@ StreakInfo computeStreaks(
         current++;
       } else if (status == EntryStatus.skipped) {
         // Neutral: keep walking.
-      } else if (status == null && isToday) {
+      } else if (isToday && openToday(status)) {
         // Today not marked yet: grace, don't break.
       } else {
         break;
