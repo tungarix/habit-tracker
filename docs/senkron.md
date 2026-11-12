@@ -80,6 +80,7 @@ adları kodla aynıdır (`lib/data/sync/sync_format.dart`); bir test bu tabloyu 
 | `syncMaxTextLength` | 10000 | Serbest metin (açıklama, not) uzunluğu, UTF-16 birimi. |
 | `syncMaxHabitName` | 100 | Alışkanlık adı. Tablo kısıtıyla aynı. |
 | `syncMaxTaskTitle` | 200 | Görev başlığı. Tablo kısıtıyla aynı. |
+| `syncMaxCount` | 1000000000 | `target` ve hücre `value` üst sınırı. Arayüz girişi aynı sınırla kısılır. |
 
 Ek olarak sayısal alanların aralıkları vardır: `target` 1–10⁹, hücre `value` 0–10⁹,
 `duration_s` 0–604800 (7 gün), `sort_order` ±10⁶, `day_start_hour` 0–12, `color_value`

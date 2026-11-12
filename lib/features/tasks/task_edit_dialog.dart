@@ -1,11 +1,13 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/date_utils.dart';
 import '../../core/enums.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../data/sync/sync_format.dart' show syncMaxTaskTitle;
 import '../../shared/theme.dart';
 
 /// Add / edit a task. Pass [existing] to edit.
@@ -104,6 +106,7 @@ class _TaskEditDialogState extends ConsumerState<TaskEditDialog> {
               TextField(
                 controller: _title,
                 autofocus: true,
+                inputFormatters: [LengthLimitingTextInputFormatter(syncMaxTaskTitle)],
                 onSubmitted: (_) => _save(),
                 decoration: const InputDecoration(
                     labelText: 'Başlık', hintText: 'Ne yapılacak?'),

@@ -44,6 +44,10 @@ const int syncMaxTextLength = 10000;
 const int syncMaxHabitName = 100;
 const int syncMaxTaskTitle = 200;
 
+/// Largest habit `target` and entry `value`. The UI caps input at the same
+/// number, so a file this device wrote can never be rejected by its own parser.
+const int syncMaxCount = 1000000000;
+
 /// Tombstone kinds, in the order the file lists them.
 const List<String> syncKinds = ['habit', 'entry', 'mood', 'task', 'session'];
 

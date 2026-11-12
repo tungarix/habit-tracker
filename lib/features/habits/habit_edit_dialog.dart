@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
@@ -7,6 +8,7 @@ import '../../core/date_utils.dart';
 import '../../core/enums.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../data/sync/sync_format.dart';
 import '../../shared/habit_style.dart';
 
 /// Add / edit a habit. Pass [existing] to edit, leave null to create.
@@ -66,7 +68,7 @@ class _HabitEditDialogState extends ConsumerState<HabitEditDialog> {
     if (!_isCount) return 1;
     final parsed = int.tryParse(_target.text.trim());
     if (parsed == null || parsed < 1) return 1;
-    return parsed;
+    return parsed > syncMaxCount ? syncMaxCount : parsed;
   }
 
   Future<void> _save() async {
@@ -117,11 +119,13 @@ class _HabitEditDialogState extends ConsumerState<HabitEditDialog> {
                 controller: _name,
                 autofocus: true,
                 textInputAction: TextInputAction.next,
+                inputFormatters: [LengthLimitingTextInputFormatter(syncMaxHabitName)],
                 decoration: const InputDecoration(labelText: 'Ad', hintText: 'Örn. Sabah egzersizi'),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _desc,
+                inputFormatters: [LengthLimitingTextInputFormatter(syncMaxTextLength)],
                 decoration: const InputDecoration(labelText: 'Açıklama (opsiyonel)'),
               ),
               const SizedBox(height: 20),
@@ -143,6 +147,10 @@ class _HabitEditDialogState extends ConsumerState<HabitEditDialog> {
                 TextField(
                   controller: _target,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter('$syncMaxCount'.length),
+                  ],
                   decoration: const InputDecoration(
                     labelText: 'Günlük hedef',
                     hintText: 'Örn. 10000 (adım) veya 90 (dakika)',

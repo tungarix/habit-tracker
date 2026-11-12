@@ -214,7 +214,7 @@ SyncFile parseSync(Uint8List bytes, {DateTime? now}) {
       _int(m, 'icon_code_point', min: 0, max: 0x10FFFF, where: 'habit $uid'),
       _str(m, 'category', where: 'habit $uid', max: 40),
       kind,
-      _int(m, 'target', min: 1, max: 1000000000, where: 'habit $uid'),
+      _int(m, 'target', min: 1, max: syncMaxCount, where: 'habit $uid'),
       _time(m, 'created_at', where: 'habit $uid')!,
       _time(m, 'archived_at', where: 'habit $uid', nullable: true),
       _int(m, 'sort_order', min: -1000000, max: 1000000, where: 'habit $uid'),
@@ -231,7 +231,7 @@ SyncFile parseSync(Uint8List bytes, {DateTime? now}) {
       habitUid,
       date,
       _str(m, 'status', where: 'entry $habitUid|$date', oneOf: _entryStatuses),
-      _int(m, 'value', min: 0, max: 1000000000, where: 'entry $habitUid|$date'),
+      _int(m, 'value', min: 0, max: syncMaxCount, where: 'entry $habitUid|$date'),
       _time(m, 'created_at', where: 'entry $habitUid|$date')!,
       _time(m, 'updated_at', where: 'entry $habitUid|$date', latest: latest)!,
     ));
