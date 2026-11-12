@@ -1,12 +1,22 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/date_utils.dart';
 import '../../../core/enums.dart';
 import '../../../core/sessions.dart';
 import '../../../data/providers.dart';
 import '../../../shared/theme.dart';
+
+/// Seconds of a run that count: wall time since [started], capped at the plan.
+/// A suspended machine stops the 1 s Timer but not the wall clock, so without
+/// the cap a night of sleep would be recorded as focus; a clock set back
+/// cannot go below 0.
+@visibleForTesting
+int focusElapsedSeconds(DateTime started, DateTime now, int plannedSeconds) =>
+    math.max(0, math.min(now.difference(started).inSeconds, plannedSeconds));
 
 /// Pomodoro timer + this week's focus totals.
 ///
@@ -46,11 +56,16 @@ class _FocusCardState extends ConsumerState<FocusCard> {
   }
 
   void _tick() {
-    if (_remaining <= 1) {
+    // Derived from the wall clock, not counted per tick: ticks are lost while
+    // the machine sleeps, which left the display and the recorded time apart.
+    final total = _plannedMinutes * 60;
+    final remaining =
+        total - focusElapsedSeconds(_startedAt!, DateTime.now(), total);
+    if (remaining <= 0) {
       _finish(completed: true);
       return;
     }
-    setState(() => _remaining--);
+    setState(() => _remaining = remaining);
   }
 
   /// Stops the run. [completed] distinguishes "rang" from "stopped early".
@@ -60,8 +75,9 @@ class _FocusCardState extends ConsumerState<FocusCard> {
     _ticker = null;
     if (started == null) return;
 
-    final ended = DateTime.now();
-    final elapsed = ended.difference(started).inSeconds;
+    final elapsed =
+        focusElapsedSeconds(started, DateTime.now(), _plannedMinutes * 60);
+    final ended = started.add(Duration(seconds: elapsed));
 
     setState(() {
       _startedAt = null;
@@ -86,7 +102,8 @@ class _FocusCardState extends ConsumerState<FocusCard> {
           startedAt: started,
           endedAt: ended,
           durationS: elapsed,
-          day: ref.read(todayProvider),
+          // The tracking day the run began on, not the one it ended on.
+          day: dayOf(started, dayStartHour: ref.read(dayStartHourProvider)),
         );
 
     if (mounted && completed) {

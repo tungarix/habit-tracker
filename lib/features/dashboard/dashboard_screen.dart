@@ -19,7 +19,7 @@ import 'widgets/mood_strip.dart';
 
 /// The screen the app opens to: today's marking, momentum, and what's next —
 /// all without a click. Density is deliberate; the hierarchy does the work.
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   // Layout thresholds. Below the first the app is effectively a phone.
@@ -29,7 +29,16 @@ class DashboardScreen extends ConsumerWidget {
   static const _gap = 8.0;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  // Sütun sayısı değişince FocusCard ağaçta başka yere taşınır; anahtar yoksa
+  // State'i (çalışan sayaç) yok olur ve seans kaydedilmeden kaybolur.
+  final _focusKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
     final habits = ref.watch(activeHabitsProvider).value;
 
     if (habits == null) {
@@ -37,15 +46,15 @@ class DashboardScreen extends ConsumerWidget {
     }
 
     return LayoutBuilder(builder: (context, c) {
-      final columns = c.maxWidth >= _threeColumn
+      final columns = c.maxWidth >= DashboardScreen._threeColumn
           ? 3
-          : c.maxWidth >= _twoColumn
+          : c.maxWidth >= DashboardScreen._twoColumn
               ? 2
               : 1;
 
       final today = _TodayCard(hasHabits: habits.isNotEmpty);
       final momentum = _MomentumCard(habits: habits);
-      const focus = FocusCard();
+      final focus = FocusCard(key: _focusKey);
       const tasks = WeekTasksCard();
       const mood = _MoodCard();
 
@@ -62,10 +71,10 @@ class DashboardScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Expanded(flex: 30, child: _FillColumn([today, mood])),
-                    const SizedBox(width: _gap),
+                    const SizedBox(width: DashboardScreen._gap),
                     Expanded(flex: 40, child: _FillColumn([momentum])),
-                    const SizedBox(width: _gap),
-                    const Expanded(flex: 30, child: _FillColumn([focus, tasks])),
+                    const SizedBox(width: DashboardScreen._gap),
+                    Expanded(flex: 30, child: _FillColumn([focus, tasks])),
                   ],
                 ),
               ),
@@ -74,8 +83,8 @@ class DashboardScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Expanded(child: _FillColumn([today, momentum, mood])),
-                    const SizedBox(width: _gap),
-                    const Expanded(child: _FillColumn([focus, tasks])),
+                    const SizedBox(width: DashboardScreen._gap),
+                    Expanded(child: _FillColumn([focus, tasks])),
                   ],
                 ),
               ),
@@ -419,7 +428,10 @@ class _MomentumRow extends StatelessWidget {
       dayStartHour: dayStartHour,
     );
     final weekDone = week.where((c) => c == HeatCell.done).length;
-    final weekActive = week.where((c) => c != HeatCell.inactive).length;
+    // Atlanan (–) gün paydaya girmez: dayCompletionRate ile aynı kural.
+    final weekActive = week
+        .where((c) => c != HeatCell.inactive && c != HeatCell.skipped)
+        .length;
     final pct = weekActive == 0 ? 0 : (weekDone / weekActive * 100).round();
 
     return Column(
