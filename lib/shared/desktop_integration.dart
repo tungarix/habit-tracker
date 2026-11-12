@@ -189,6 +189,9 @@ class TrayService with WindowListener {
       }
       trayIcon.setTooltip('Aktenak');
       trayIcon.setVisible(true);
+      // nativeapi'de varsayılan tetikleyici "none": ayarlanmazsa sağ tık menüsü
+      // (Çıkış dahil) hiç açılmaz ve uygulama tepsiden kapatılamaz.
+      trayIcon.setContextMenuTrigger(native.ContextMenuTrigger.rightClicked);
       trayIcon.addListener((event) {
         if (event is native.TrayIconClickedEvent) _showWindow();
       });

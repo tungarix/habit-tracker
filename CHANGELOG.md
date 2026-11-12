@@ -2,6 +2,11 @@
 
 Eski sürümlerin notları GitHub Releases sayfasındadır.
 
+## 1.4.4 (2026-11-12)
+
+- Tepsi simgesine sağ tıklayınca menü açılıyor: Çıkış menüsü hiç açılmıyordu, bu yüzden uygulama
+  tepsideyken kapatılamıyordu. (nativeapi menüyü varsayılan olarak kapalı tutuyor; açıkça açıldı.)
+
 ## 1.4.3 (2026-11-12)
 
 - Ekran okuyucu: bugün satırında hedefin altındaki kısmi miktar "yapılmadı" yerine
