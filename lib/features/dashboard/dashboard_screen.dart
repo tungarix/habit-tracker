@@ -279,7 +279,9 @@ class _TodayRow extends ConsumerWidget {
       opacity: dimmed ? 0.55 : 1,
       child: Semantics(
         button: true,
-        label: '${habit.name}, ${statusLabel(view.status)}'
+        // Bugün bitmedi: hedefin altındaki kısmi miktar "yapılmadı" diye okunmaz.
+        label: '${habit.name}, '
+            '${isCount && value > 0 && view.status == EntryStatus.missed ? 'devam ediyor' : statusLabel(view.status)}'
             '${isCount ? ', $value / ${habit.target}' : ''}',
         child: Material(
           color: Colors.transparent,

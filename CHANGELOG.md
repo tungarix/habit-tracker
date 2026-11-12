@@ -2,6 +2,11 @@
 
 Eski sürümlerin notları GitHub Releases sayfasındadır.
 
+## 1.4.3 (2026-11-12)
+
+- Ekran okuyucu: bugün satırında hedefin altındaki kısmi miktar "yapılmadı" yerine
+  "devam ediyor" okunur (gün bitmedi).
+
 ## 1.4.2 (2026-11-12)
 
 Kod incelemesi turu: yeni özellik yok, hata düzeltmeleri.
