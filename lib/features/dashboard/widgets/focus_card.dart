@@ -25,9 +25,6 @@ int focusElapsedSeconds(DateTime started, DateTime now, int plannedSeconds) =>
 class FocusCard extends ConsumerStatefulWidget {
   const FocusCard({super.key});
 
-  /// Çalışan seansı durdurup kaydeder (tepsi "Çıkış" çağırır); seans yoksa null.
-  static Future<void> Function()? saveRunningOnQuit;
-
   @override
   ConsumerState<FocusCard> createState() => _FocusCardState();
 }
@@ -47,7 +44,6 @@ class _FocusCardState extends ConsumerState<FocusCard> {
   @override
   void dispose() {
     _ticker?.cancel();
-    if (_running) FocusCard.saveRunningOnQuit = null;
     super.dispose();
   }
 
@@ -57,7 +53,6 @@ class _FocusCardState extends ConsumerState<FocusCard> {
       _remaining = _plannedMinutes * 60;
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
     });
-    FocusCard.saveRunningOnQuit = () => _finish(completed: false);
   }
 
   void _tick() {
@@ -78,7 +73,6 @@ class _FocusCardState extends ConsumerState<FocusCard> {
     final started = _startedAt;
     _ticker?.cancel();
     _ticker = null;
-    FocusCard.saveRunningOnQuit = null;
     if (started == null) return;
 
     final elapsed =

@@ -2,6 +2,14 @@
 
 Eski sürümlerin notları GitHub Releases sayfasındadır.
 
+## 1.4.5 (2026-11-13)
+
+- Tepsi simgesinde sağ tık > Çıkış uygulamayı anında kapatıyor. Önceki sürümde menü açılsa bile Çıkış
+  bir sonraki fare tıklamasına kadar takılı kalıyordu (menü tıklaması yerel menü döngüsünden geldiği için
+  beklemeli kapanış ilerlemiyordu). Artık beklemeden sonlanır.
+- Bu yüzden tepsiden Çıkış, çalışan odak seansını artık kaydetmez (1.4.2'de eklenen davranış geri alındı;
+  kaydetmek beklemeyi gerektiriyordu). Odak sayacı çalışırken Çıkış yapma, önce "Bitir"e bas.
+
 ## 1.4.4 (2026-11-12)
 
 - Tepsi simgesine sağ tıklayınca menü açılıyor: Çıkış menüsü hiç açılmıyordu, bu yüzden uygulama

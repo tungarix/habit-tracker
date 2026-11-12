@@ -13,7 +13,6 @@ import '../core/enums.dart';
 import '../core/window_placement.dart';
 import '../data/models/habit_today_view.dart';
 import '../data/providers.dart';
-import '../features/dashboard/widgets/focus_card.dart';
 import 'windows_bildirim.dart';
 
 const _appId = 'com.aktenak.habit_tracker';
@@ -346,16 +345,14 @@ class TrayService with WindowListener {
     });
   }
 
-  /// The one real exit: tray "Çıkış" and the updater both end here
-  /// (no `exit(0)` — the window must close the normal way).
+  /// The one real exit: tray "Çıkış" and the updater both end here.
+  /// Nothing is awaited on purpose: the menu click arrives from inside the
+  /// native menu code, and from there the Dart event loop does not advance
+  /// until the next window message, so any `await` here stalls (the app stayed
+  /// open until the user clicked the tray icon again). The window position is
+  /// already saved on every move/resize/hide; sqlite is crash-safe.
   Future<void> quit() async {
-    // Çalışan odak seansı (varsa) kaydedilir; yoksa yarım kalan süre kaybolur.
-    try {
-      await FocusCard.saveRunningOnQuit?.call();
-    } catch (_) {}
-    await _savePlacement();
-    await windowManager.setPreventClose(false);
-    await windowManager.destroy();
+    Process.killPid(pid, ProcessSignal.sigkill);
   }
 
   @override
