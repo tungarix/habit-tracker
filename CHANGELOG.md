@@ -2,6 +2,16 @@
 
 Eski sürümlerin notları GitHub Releases sayfasındadır.
 
+## 1.4.6 (2026-11-14)
+
+- Ruh hali kartı: son 30 günün ortalaması ("Son 30 gün ortalaması: 4,0 / 5 (3 kayıt)").
+- Yeni Ruh hali geçmişi penceresi (kartın başlığındaki saat simgesi): tüm günlerin ruh hali ve notları,
+  satıra tıklayınca not düzenleme, çöp kutusuyla gün silme (onay ister). Geçmiş günün not penceresi
+  o günün tarihini başlık yapar.
+- Not penceresinde açık "Notu sil" düğmesi; notu silmek ruh halini silmez.
+- Notlu günde seçili ruh haline tekrar tıklamak artık önce onay soruyor (not da silinir).
+- Android 0.1.5 ile aynı değişiklik.
+
 ## 1.4.5 (2026-11-13)
 
 - Tepsi simgesinde sağ tık > Çıkış uygulamayı anında kapatıyor. Önceki sürümde menü açılsa bile Çıkış

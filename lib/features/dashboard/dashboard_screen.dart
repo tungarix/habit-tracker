@@ -15,6 +15,7 @@ import '../habits/habit_edit_dialog.dart';
 import '../tasks/widgets/week_tasks_card.dart';
 import 'widgets/focus_card.dart';
 import 'widgets/heat_strip.dart';
+import 'widgets/mood_gecmisi_dialog.dart';
 import 'widgets/mood_strip.dart';
 
 /// The screen the app opens to: today's marking, momentum, and what's next —
@@ -489,6 +490,7 @@ class _MoodCard extends ConsumerWidget {
     final selected = Mood.fromValue(entry?.mood);
     final moodByDate = ref.watch(moodByDateProvider);
     final colors = AppColors.of(context);
+    final ort = moodOrtalamasi(moodByDate, day);
 
     return Card(
       child: Padding(
@@ -504,6 +506,16 @@ class _MoodCard extends ConsumerWidget {
                     text: selected?.label ?? 'Bugün nasılsın?',
                   ),
                 ),
+                IconButton(
+                  tooltip: 'Geçmiş',
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 18,
+                  icon: Icon(Icons.history, color: colors.textDim),
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => const MoodGecmisiDialog(),
+                  ),
+                ),
                 if (selected != null)
                   IconButton(
                     tooltip: 'Not',
@@ -515,7 +527,7 @@ class _MoodCard extends ConsumerWidget {
                           : Icons.edit_note,
                       color: colors.textDim,
                     ),
-                    onPressed: () => _editNote(
+                    onPressed: () => moodNotuDuzenle(
                         context, ref, formatYmd(day), entry?.note),
                   ),
               ],
@@ -523,12 +535,23 @@ class _MoodCard extends ConsumerWidget {
             const SizedBox(height: 8),
             MoodPicker(
               selected: selected,
-              onTap: (mood) {
+              onTap: (mood) async {
                 final repo = ref.read(habitRepositoryProvider);
                 final dateStr = formatYmd(day);
-                mood == selected
-                    ? repo.clearMood(dateStr)
-                    : repo.setMood(dateStr, mood.value);
+                if (mood != selected) {
+                  repo.setMood(dateStr, mood.value);
+                  return;
+                }
+                // Tekrar dokunmak kaydı ve günün notunu siler: not varsa sor.
+                if (entry?.note?.isNotEmpty ?? false) {
+                  final ok = await moodOnayIste(
+                    context,
+                    baslik: 'Ruh hali silinsin mi?',
+                    govde: 'Bugünün notu da silinir. Bu geri alınamaz.',
+                  );
+                  if (!ok) return;
+                }
+                repo.clearMood(dateStr);
               },
             ),
             if (entry?.note?.isNotEmpty ?? false) ...[
@@ -543,48 +566,38 @@ class _MoodCard extends ConsumerWidget {
             ],
             const SizedBox(height: 6),
             MoodStrip(moodByDate: moodByDate, endDay: day),
+            if (ort.n > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'Son 30 gün ortalaması: '
+                  '${ort.ortalama.toStringAsFixed(1).replaceAll('.', ',')} / 5 '
+                  '(${ort.n} kayıt)',
+                  style: TextStyle(fontSize: 12, color: colors.textDim),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
+}
 
-  Future<void> _editNote(
-    BuildContext context,
-    WidgetRef ref,
-    String dateStr,
-    String? current,
-  ) async {
-    final controller = TextEditingController(text: current ?? '');
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Bugüne kısa not'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 200,
-          decoration: const InputDecoration(hintText: 'Örn. yoğun bir gündü'),
-          onSubmitted: (v) => Navigator.pop(context, v),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('İptal')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, controller.text),
-              child: const Text('Kaydet')),
-        ],
-      ),
-    );
-    if (result != null) {
-      final trimmed = result.trim();
-      await ref
-          .read(habitRepositoryProvider)
-          .setMoodNote(dateStr, trimmed.isEmpty ? null : trimmed);
-    }
-    controller.dispose();
-  }
+/// Son [days] takip gününde kayıtlı ruh hali değerlerinin ortalaması ve kayıt sayısı.
+({double ortalama, int n}) moodOrtalamasi(
+  Map<String, MoodEntry> moodByDate,
+  DateTime endDay, {
+  int days = 30,
+}) {
+  final values = [
+    for (final d in lastDays(endDay, days))
+      if (moodByDate[formatYmd(d)] case final e?) e.mood,
+  ];
+  if (values.isEmpty) return (ortalama: 0, n: 0);
+  return (
+    ortalama: values.reduce((a, b) => a + b) / values.length,
+    n: values.length,
+  );
 }
 
 class _CardTitle extends StatelessWidget {
