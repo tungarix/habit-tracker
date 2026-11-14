@@ -2,8 +2,9 @@
 
 Eski sürümlerin notları GitHub Releases sayfasındadır.
 
-## Yayınlanmamış
+## 1.4.7 (2026-11-15)
 
+- Tepsiden Çıkış artık simgeyi de kaldırıyor (1.4.5 ve 1.4.6'da uygulama kapanıyor ama simge tepside kalıyordu).
 - Yeni ruh hali "Orta" (ağzı düz çizgi olan nötr yüz): seçicide Üzgün ile Memnun arasında. Ortalama,
   grafik ve Mood ↔ Tamamlama ilişkisinde 3,5 puan sayılır. Eski kayıtlar değişmez.
 - Orta kullandıysan masaüstü ve telefondaki uygulamanın İKİSİNİ de güncelle: eski sürüm Orta içeren
