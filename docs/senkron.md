@@ -58,7 +58,10 @@ UTF-8 JSON, uzantı `.habitsync`. Anahtarlar İngilizce, alt çizgili küçük h
   `deleted[].key` o türün anahtarıdır.
 - Enum değerleri: hücre `status` `done` | `missed` | `skipped`; alışkanlık `kind` `bool` |
   `count`; görev `status` `todo` | `doing` | `done`, `priority` 0–2; seans `kind` `focus` |
-  `break`; `mood` 1–5.
+  `break`; `mood` 1–6 (6 = Orta; numaralar sabit, gösterim sırası ve puan
+  uygulamadadır, dosyada yoktur). Eski sürümler (masaüstü ≤1.4.6, Android ≤0.1.5) 6'yı görünce
+  bütün `.habitsync` dosyasını "geçersiz" diye reddeder (hiçbir şey birleşmez); JSON yedekte ise 6'lı
+  mood kaydını sessizce atlar. `syncVersion` bu yüzden artmadı: iki cihazı da güncellemek gerekir.
 - Dosyaya **konmayanlar** (cihaza özel): tema, hatırlatıcı saati ve `focus_running`, pencere
   konumu, yerel tamsayı `id`'ler. `Settings`'ten yalnız `day_start_hour` taşınır.
 - Bilinmeyen alanlar yok sayılır (ileri uyum). `version` bilinenden büyükse dosya reddedilir

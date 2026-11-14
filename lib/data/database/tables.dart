@@ -79,7 +79,7 @@ class MoodEntries extends Table {
   /// Calendar day as `YYYY-MM-DD`; one mood per day.
   TextColumn get date => text().unique()();
 
-  /// 1..5 ([Mood.value]).
+  /// 1..6 ([Mood.value]); 6 = Orta.
   IntColumn get mood => integer()();
 
   TextColumn get note => text().nullable()();

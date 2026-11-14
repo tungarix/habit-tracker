@@ -344,7 +344,7 @@ class BackupRepository {
 
       for (final m in moodMaps) {
         final mood = m['mood'] as int?;
-        if (mood == null || mood < 1 || mood > 5) continue;
+        if (mood == null || mood < 1 || mood > 6) continue;
         final date = m['date'] as String;
         await db.setMood(date, mood, note: m['note'] as String?);
         await _restoreStamp('mood_entries', 'date = ?', [date], _secs(m['updatedAt']));

@@ -1,4 +1,5 @@
 import 'package:aktenak_habit_tracker/core/stats.dart';
+import 'package:aktenak_habit_tracker/core/enums.dart';
 import 'package:aktenak_habit_tracker/data/database/database.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -202,6 +203,31 @@ void main() {
       // Good moods line up with completed days here.
       expect(result.r, isNotNull);
       expect(result.r!, greaterThan(0.9));
+    });
+
+    test('Orta puanı 3,5 sayılır; sayım kayıtlı numarayla (6) tutulur', () {
+      final habits = [testHabit(id: 1, createdAt: start)];
+      final result = moodCompletionCorrelation(
+        habits,
+        {
+          1: statusMap(
+            done: [DateTime(2026, 6, 10), DateTime(2026, 6, 12)],
+            missed: [DateTime(2026, 6, 11)],
+          )
+        },
+        {
+          '2026-06-10': testMood(DateTime(2026, 6, 10), 6),
+          '2026-06-11': testMood(DateTime(2026, 6, 11), 3),
+          '2026-06-12': testMood(DateTime(2026, 6, 12), 4),
+        },
+        DateTime(2026, 6, 30),
+      );
+      expect(result.daysByMood[6], 1);
+      expect(result.averageByMood[6], 1.0);
+      // 3,5 ve 4 yüksek tamamlamayla, 3 düşük tamamlamayla: pozitif ilişki.
+      expect(result.r!, greaterThan(0.5));
+      expect(Mood.puanOf(6), 3.5);
+      expect(Mood.puanOf(4), 4);
     });
 
     test('ignores mood days in the future', () {

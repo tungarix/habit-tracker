@@ -591,7 +591,7 @@ class _MoodCard extends ConsumerWidget {
 }) {
   final values = [
     for (final d in lastDays(endDay, days))
-      if (moodByDate[formatYmd(d)] case final e?) e.mood,
+      if (moodByDate[formatYmd(d)] case final e?) Mood.puanOf(e.mood),
   ];
   if (values.isEmpty) return (ortalama: 0, n: 0);
   return (

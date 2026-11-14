@@ -196,6 +196,7 @@ extension MoodIcon on Mood {
         Mood.yorgun => Icons.bedtime_outlined,
         Mood.stresli => Icons.sentiment_very_dissatisfied_outlined,
         Mood.uzgun => Icons.sentiment_dissatisfied_outlined,
+        Mood.orta => Icons.sentiment_neutral_outlined,
         Mood.memnun => Icons.sentiment_satisfied_outlined,
         Mood.mutlu => Icons.sentiment_very_satisfied_outlined,
       };

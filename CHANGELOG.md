@@ -2,6 +2,13 @@
 
 Eski sürümlerin notları GitHub Releases sayfasındadır.
 
+## Yayınlanmamış
+
+- Yeni ruh hali "Orta" (ağzı düz çizgi olan nötr yüz): seçicide Üzgün ile Memnun arasında. Ortalama,
+  grafik ve Mood ↔ Tamamlama ilişkisinde 3,5 puan sayılır. Eski kayıtlar değişmez.
+- Orta kullandıysan masaüstü ve telefondaki uygulamanın İKİSİNİ de güncelle: eski sürüm Orta içeren
+  senkron dosyasını "geçersiz" sayıp hiçbir şeyi birleştirmez, JSON yedeğinde Orta günlerini atlar.
+
 ## 1.4.6 (2026-11-14)
 
 - Ruh hali kartı: son 30 günün ortalaması ("Son 30 gün ortalaması: 4,0 / 5 (3 kayıt)").

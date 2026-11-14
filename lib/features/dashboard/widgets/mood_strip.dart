@@ -27,7 +27,8 @@ class MoodStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final series = [
-      for (final day in lastDays(endDay, days)) moodByDate[formatYmd(day)]?.mood,
+      for (final day in lastDays(endDay, days))
+        if (moodByDate[formatYmd(day)]?.mood case final m?) Mood.puanOf(m) else null,
     ];
     final recorded = series.where((m) => m != null).length;
 
@@ -58,7 +59,7 @@ class MoodStrip extends StatelessWidget {
 }
 
 class _MoodStripPainter extends CustomPainter {
-  final List<int?> series;
+  final List<double?> series;
   final Color line;
   final Color grid;
 
@@ -76,13 +77,13 @@ class _MoodStripPainter extends CustomPainter {
     if (n == 0) return;
 
     double xAt(int i) => n == 1 ? size.width / 2 : size.width * (i / (n - 1));
-    double yAt(int mood) => pad + plotH * (1 - (mood - 1) / 4);
+    double yAt(double mood) => pad + plotH * (1 - (mood - 1) / 4);
 
     // Faint rails at the extremes only — enough to read height, no clutter.
     final gridPaint = Paint()
       ..color = grid.withValues(alpha: 0.5)
       ..strokeWidth = 1;
-    for (final mood in [1, 5]) {
+    for (final mood in [1.0, 5.0]) {
       final y = yAt(mood);
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
@@ -121,7 +122,7 @@ class _MoodStripPainter extends CustomPainter {
       old.series != series || old.line != line || old.grid != grid;
 }
 
-/// Five one-tap mood buttons. Tapping the selected one clears it.
+/// Six one-tap mood buttons. Tapping the selected one clears it.
 class MoodPicker extends StatelessWidget {
   final Mood? selected;
   final ValueChanged<Mood> onTap;
@@ -139,7 +140,7 @@ class MoodPicker extends StatelessWidget {
     final colors = AppColors.of(context);
     return Row(
       children: [
-        for (final mood in Mood.values) ...[
+        for (final mood in Mood.sirali) ...[
           Expanded(
             child: Tooltip(
               message: mood.label,
@@ -185,7 +186,7 @@ class MoodPicker extends StatelessWidget {
               ),
             ),
           ),
-          if (mood != Mood.values.last) const SizedBox(width: 6),
+          if (mood != Mood.sirali.last) const SizedBox(width: 6),
         ],
       ],
     );

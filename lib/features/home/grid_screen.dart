@@ -376,7 +376,7 @@ class _GridCell extends ConsumerWidget {
 }
 
 /// Bullet-journal style mood line under the grid, sharing the day axis:
-/// x = day column centre, y = mood 1..5. Watches moods itself, so habit
+/// x = day column centre, y = mood score 1..5. Watches moods itself, so habit
 /// taps never repaint it (and mood taps never repaint the grid).
 class _MoodLine extends ConsumerWidget {
   final DateTime month;
@@ -396,9 +396,10 @@ class _MoodLine extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     final moodByDate = ref.watch(moodByDateProvider);
-    final moods = List<int?>.generate(days, (i) {
+    final moods = List<double?>.generate(days, (i) {
       final date = formatYmd(DateTime(month.year, month.month, i + 1));
-      return moodByDate[date]?.mood;
+      final m = moodByDate[date]?.mood;
+      return m == null ? null : Mood.puanOf(m);
     });
     final hasAny = moods.any((m) => m != null);
 
@@ -425,7 +426,7 @@ class _MoodLine extends ConsumerWidget {
 }
 
 class _MoodLinePainter extends CustomPainter {
-  final List<int?> moods;
+  final List<double?> moods;
   final double cellW;
   final Color lineColor;
   final Color gridColor;
@@ -447,7 +448,7 @@ class _MoodLinePainter extends CustomPainter {
     const bottom = 8.0;
     final plotH = size.height - top - bottom;
 
-    double yFor(int mood) => top + plotH * (1 - (mood - 1) / 4);
+    double yFor(num mood) => top + plotH * (1 - (mood - 1) / 4);
     double xFor(int i) => i * cellW + cellW / 2;
 
     // Light horizontal guides for each mood level.

@@ -348,6 +348,28 @@ void main() {
     });
   });
 
+  group('Orta (6)', () {
+    test('JSON yedek gidiş-dönüşünde 6 korunur, eski 1..5 okunur, 7 atlanır', () async {
+      final src = _memoryDb();
+      await BackupRepository(src).importJson(
+        _file(moods: [
+          {'date': '2026-03-01', 'mood': 6},
+          {'date': '2026-03-02', 'mood': 4},
+          {'date': '2026-03-03', 'mood': 1},
+          {'date': '2026-03-04', 'mood': 7},
+        ]),
+        replace: false,
+      );
+      expect((await src.getAllMoods()).map((m) => m.mood).toList()..sort(), [1, 4, 6]);
+
+      final dst = _memoryDb();
+      await BackupRepository(dst)
+          .importJson(await BackupRepository(src).exportJson(), replace: false);
+      expect((await dst.getMood('2026-03-01'))!.mood, 6);
+      expect((await dst.getMood('2026-03-02'))!.mood, 4);
+    });
+  });
+
   group('replace', () {
     test('keeps every id exactly as the file has it', () async {
       final db = _memoryDb();

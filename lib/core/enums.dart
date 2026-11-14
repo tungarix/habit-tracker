@@ -119,18 +119,27 @@ enum SessionKind {
   }
 }
 
-/// Mood scale, 1..5. Stored as [value].
+/// Mood. Stored as [value] (1..6; numbers never change, Orta was added as 6).
+/// [sira] is the display order, [puan] the score used by averages, charts and
+/// correlation (1..5 scale; Orta sits between Üzgün and Memnun).
 enum Mood {
-  yorgun(1, 'Yorgun', '😴'),
-  stresli(2, 'Stresli', '😣'),
-  uzgun(3, 'Üzgün', '😞'),
-  memnun(4, 'Memnun', '🙂'),
-  mutlu(5, 'Mutlu', '😄');
+  yorgun(1, 'Yorgun', '😴', 1, 1),
+  stresli(2, 'Stresli', '😣', 2, 2),
+  uzgun(3, 'Üzgün', '😞', 3, 3),
+  orta(6, 'Orta', '😐', 4, 3.5),
+  memnun(4, 'Memnun', '🙂', 5, 4),
+  mutlu(5, 'Mutlu', '😄', 6, 5);
 
   final int value;
   final String label;
   final String emoji;
-  const Mood(this.value, this.label, this.emoji);
+  final int sira;
+  final double puan;
+  const Mood(this.value, this.label, this.emoji, this.sira, this.puan);
+
+  /// All moods in display order (pickers, lists). [values] is declaration order.
+  static final List<Mood> sirali = [...values]
+    ..sort((a, b) => a.sira.compareTo(b.sira));
 
   static Mood? fromValue(int? value) {
     for (final m in Mood.values) {
@@ -138,4 +147,7 @@ enum Mood {
     }
     return null;
   }
+
+  /// Score of a stored mood number; unknown numbers fall back to themselves.
+  static double puanOf(int value) => fromValue(value)?.puan ?? value.toDouble();
 }

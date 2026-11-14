@@ -392,7 +392,7 @@ class _MoodCorrelationCard extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        for (final mood in Mood.values) ...[
+                        for (final mood in Mood.sirali) ...[
                           Expanded(
                             child: _moodBar(
                               colors,
@@ -401,7 +401,7 @@ class _MoodCorrelationCard extends StatelessWidget {
                               correlation.daysByMood[mood.value] ?? 0,
                             ),
                           ),
-                          if (mood != Mood.values.last) const SizedBox(width: 10),
+                          if (mood != Mood.sirali.last) const SizedBox(width: 10),
                         ],
                       ],
                     ),

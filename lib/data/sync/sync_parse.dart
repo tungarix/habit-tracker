@@ -242,7 +242,7 @@ SyncFile parseSync(Uint8List bytes, {DateTime? now}) {
     unique('moods', date);
     file.moods.add(SMood(
       date,
-      _int(m, 'mood', min: 1, max: 5, where: 'mood $date'),
+      _int(m, 'mood', min: 1, max: 6, where: 'mood $date'),
       _strOrNull(m, 'note', where: 'mood $date', max: syncMaxTextLength),
       _time(m, 'created_at', where: 'mood $date')!,
       _time(m, 'updated_at', where: 'mood $date', latest: latest)!,

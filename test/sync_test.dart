@@ -49,6 +49,26 @@ void main() {
   }
 
   // ===========================================================================
+  group('Orta (6)', () {
+    test('.habitsync gidiş-dönüşünde 6 korunur; eski 1..5 dosya okunur; 7 ve 0 reddedilir', () async {
+      await d.mood('2026-05-01', 6, 20, note: 'orta gün');
+      await d.mood('2026-05-02', 4, 20);
+      await d.mood('2026-05-03', 1, 20);
+      await sync(d, m);
+      expect((await m.db.getMood('2026-05-01'))!.mood, 6);
+      expect((await m.db.getMood('2026-05-02'))!.mood, 4);
+      expect((await m.db.getMood('2026-05-03'))!.mood, 1);
+      await expectEqual();
+
+      final json = jsonDecode(await exportSync(d.db)) as Map<String, dynamic>;
+      (json['moods'] as List)[0]['mood'] = 7;
+      expect(() => parseSync(Uint8List.fromList(utf8.encode(jsonEncode(json)))), throwsA(isA<SyncException>()));
+      (json['moods'] as List)[0]['mood'] = 0;
+      expect(() => parseSync(Uint8List.fromList(utf8.encode(jsonEncode(json)))), throwsA(isA<SyncException>()));
+    });
+  });
+
+  // ===========================================================================
   group('biçim ve doğrulama', () {
     test('dışa aktar -> boş cihaza içe aktar: aynı durum, ikinci içe aktarma değişiklik yok',
         () async {
@@ -127,7 +147,7 @@ void main() {
       await mutated((j) => (j['entries'] as List)[0]['status'] = 'x', 'durum');
       await mutated((j) => (j['entries'] as List)[0]['value'] = 1.5, 'ondalık');
       await mutated((j) => (j['entries'] as List).add((j['entries'] as List)[0]), 'çift hücre');
-      await mutated((j) => (j['moods'] as List)[0]['mood'] = 6, 'mood');
+      await mutated((j) => (j['moods'] as List)[0]['mood'] = 7, 'mood');
       await mutated((j) => (j['tasks'] as List)[0]['status'] = 'bitti', 'görev durumu');
       await mutated((j) => (j['tasks'] as List)[0]['priority'] = 3, 'öncelik');
       await mutated((j) => (j['sessions'] as List)[0]['duration_s'] = -1, 'süre');

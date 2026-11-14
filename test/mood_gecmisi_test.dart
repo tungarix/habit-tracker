@@ -138,6 +138,32 @@ void main() {
     await kapat(tester);
   });
 
+  testWidgets('Ortalama: Orta 3,5 sayılır (Orta + Memnun → 3,8 / 5)',
+      (tester) async {
+    final db = await bellekDb();
+    await db.setMood(_gun(1), Mood.orta.value);
+    await db.setMood(_gun(2), Mood.memnun.value);
+    await ac(tester, db);
+    expect(find.text('Son 30 gün ortalaması: 3,8 / 5 (2 kayıt)'),
+        findsOneWidget);
+    await kapat(tester);
+  });
+
+  testWidgets('Seçicide Orta, Üzgün ile Memnun arasındadır; Orta kaydedilir',
+      (tester) async {
+    final db = await bellekDb();
+    await ac(tester, db);
+    double x(Mood m) => tester.getCenter(find.byIcon(m.icon)).dx;
+    expect(x(Mood.orta), greaterThan(x(Mood.uzgun)));
+    expect(x(Mood.orta), lessThan(x(Mood.memnun)));
+    expect(Mood.orta.icon, Icons.sentiment_neutral_outlined);
+
+    await tester.tap(find.byIcon(Mood.orta.icon));
+    await bekle(tester);
+    expect((await tester.runAsync(() => db.getMood(_gun(0))))!.mood, 6);
+    await kapat(tester);
+  });
+
   testWidgets('Ortalama satırı kayıt yokken görünmez', (tester) async {
     final db = await bellekDb();
     await ac(tester, db);

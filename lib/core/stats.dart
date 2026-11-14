@@ -244,7 +244,7 @@ MoodCorrelation moodCompletionCorrelation(
     if (rate == null) continue;
     sums[entry.mood] = (sums[entry.mood] ?? 0) + rate;
     counts[entry.mood] = (counts[entry.mood] ?? 0) + 1;
-    moodSamples.add(entry.mood.toDouble());
+    moodSamples.add(Mood.puanOf(entry.mood));
     rateSamples.add(rate);
   }
 
