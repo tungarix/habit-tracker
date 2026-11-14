@@ -224,8 +224,8 @@ void main() {
       );
       expect(result.daysByMood[6], 1);
       expect(result.averageByMood[6], 1.0);
-      // 3,5 ve 4 yüksek tamamlamayla, 3 düşük tamamlamayla: pozitif ilişki.
-      expect(result.r!, greaterThan(0.5));
+      // Puanlar [3,5; 3; 4], tamamlama [1; 0; 1]: r = √3/2. Ham numara (6) kullanılsaydı ≈ 0,756 çıkardı.
+      expect(result.r!, closeTo(0.8660, 0.001));
       expect(Mood.puanOf(6), 3.5);
       expect(Mood.puanOf(4), 4);
     });

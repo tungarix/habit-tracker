@@ -165,6 +165,13 @@ class Dev {
   Future<int?> dayStart() async =>
       int.tryParse(await db.getSetting(AppConstants.dayStartHourKey) ?? '');
 
+  /// Backup v5 carries no created_at for entries/moods, so a restore stamps them
+  /// with the wall clock; tests that compare across a restore pin them first.
+  Future<void> pinEntryCreated() async {
+    await sql('UPDATE habit_entries SET created_at = ?', [at(0)]);
+    await sql('UPDATE mood_entries SET created_at = ?', [at(0)]);
+  }
+
   // -- reads --------------------------------------------------------------------
 
   /// Everything that syncs, normalised so two devices can be compared.

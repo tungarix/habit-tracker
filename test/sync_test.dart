@@ -581,6 +581,8 @@ void main() {
           reason: 'restore keeps uid and updatedAt');
 
       await settle(d, m);
+      await d.pinEntryCreated();
+      await m.pinEntryCreated();
       await expectEqual();
       expect(await d.count('habits'), 2); // "Yeni" was not in the backup: gone
       expect((await d.db.getAllHabits()).map((h) => h.name), isNot(contains('Sonradan')));

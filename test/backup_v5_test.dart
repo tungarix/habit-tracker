@@ -51,6 +51,8 @@ void main() {
     await b.habit('Başka', stamp: 5, created: 9); // wiped by replace
     await BackupRepository(b.db).importJson(backup, replace: true);
 
+    await a.pinEntryCreated();
+    await b.pinEntryCreated();
     final sa = jsonDecode(await a.state()) as Map<String, dynamic>;
     final sb = jsonDecode(await b.state()) as Map<String, dynamic>;
     for (final k in ['habits', 'entries', 'moods', 'tasks', 'sessions']) {
