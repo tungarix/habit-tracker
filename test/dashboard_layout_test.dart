@@ -1,4 +1,5 @@
 import 'package:aktenak_habit_tracker/app.dart';
+import 'package:aktenak_habit_tracker/core/date_utils.dart';
 import 'package:aktenak_habit_tracker/core/enums.dart';
 import 'package:aktenak_habit_tracker/data/database/database.dart';
 import 'package:aktenak_habit_tracker/data/providers.dart';
@@ -14,6 +15,11 @@ import 'package:intl/date_symbol_data_local.dart';
 /// throws and fails the test.
 void main() {
   setUpAll(() => initializeDateFormatting('tr'));
+
+  // Sabit an: testin gercek saate bagimli olmamasi icin. Uygulamanin gunu
+  // 04:00'te doner; takip gunu dayOf ile hesaplanir, tohum ve provider ayni gunu kullanir.
+  final an = DateTime(2026, 3, 10, 12, 0);
+  final bugun = dayOf(an, dayStartHour: 4);
 
   Future<AppDatabase> seed() async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -38,7 +44,7 @@ void main() {
       iconCodePoint: 0xe002,
     ));
 
-    final today = DateTime.now();
+    final today = bugun;
     String ymd(DateTime d) =>
         '${d.year.toString().padLeft(4, '0')}-'
         '${d.month.toString().padLeft(2, '0')}-'
@@ -82,7 +88,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [databaseProvider.overrideWithValue(db)],
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          todayProvider.overrideWithValue(bugun),
+        ],
         child: const AktenakApp(),
       ),
     );
