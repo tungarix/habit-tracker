@@ -351,7 +351,10 @@ class TrayService with WindowListener {
   /// until the next window message, so any `await` here stalls (the app stayed
   /// open until the user clicked the tray icon again). The window position is
   /// already saved on every move/resize/hide; sqlite is crash-safe.
+  /// sigkill skips the OS tray cleanup, so the icon is removed first (sync
+  /// Shell_NotifyIcon NIM_DELETE); otherwise a ghost icon stays on the tray.
   Future<void> quit() async {
+    _trayIcon?.setVisible(false);
     Process.killPid(pid, ProcessSignal.sigkill);
   }
 

@@ -22,4 +22,14 @@ void main() {
     expect(govde, contains('Process.killPid(pid'));
     expect(govde, isNot(contains('await')));
   }, skip: kaynak.existsSync() ? null : 'masaüstü entegrasyonu yok');
+
+  test('Çıkış, süreci öldürmeden önce tepsi simgesini kaldırır (hayalet simge kalmasın)', () {
+    final s = kaynak.readAsStringSync();
+    final govde = RegExp(r'Future<void> quit\(\) async \{(.*?)\n  \}', dotAll: true)
+        .firstMatch(s)!
+        .group(1)!;
+    final kaldir = govde.indexOf('_trayIcon?.setVisible(false)');
+    expect(kaldir, isNonNegative);
+    expect(kaldir, lessThan(govde.indexOf('Process.killPid(pid')));
+  }, skip: kaynak.existsSync() ? null : 'masaüstü entegrasyonu yok');
 }
