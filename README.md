@@ -165,5 +165,6 @@ flutter pub get
 dart run build_runner build           # drift kod üretimi (tabloları değiştirince)
 flutter analyze
 flutter test
+pwsh tool/test_calistir.ps1       # Windows'ta flutter_tester rastgele coker; dosya dosya kosar, yalniz cokmeyi yeniden dener
 flutter run -d windows                # veya: flutter build windows --release
 ```
