@@ -22,6 +22,25 @@ repoda, MIT lisanslı — inceleyip kendin derleyebilirsin.
 Sorun/öneri için [Issues](https://github.com/tungarix/habit-tracker/issues)
 sekmesini kullanabilirsin.
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by
+[SignPath Foundation](https://signpath.org).
+
+- **Committers, reviewers and approvers:** [@tungarix](https://github.com/tungarix)
+  (sole maintainer).
+- Only binaries built from this repository by the public GitHub Actions workflow
+  ([`release.yml`](.github/workflows/release.yml)) are signed. Third-party components
+  (e.g. the Flutter runtime DLLs) are not signed with this certificate.
+
+### Privacy policy
+
+This program will not transfer any information to other networked systems unless
+specifically requested by the user or the person installing or operating it. The only
+network requests are the optional update check against GitHub releases of this repository
+(off until the user enables it or presses "check now") and the local-network phone sync the
+user starts.
+
 ## Özellikler (mevcut durum)
 
 - **Panel** (açılış ekranı, günlük kullanımın çoğunu tek başına karşılar):
